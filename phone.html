@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Play Ganesha Game on Your Phone</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Philosopher:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --gold: #ffd700;
+      --saffron: #ff6f00;
+      --dark: #0f051d;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at center, #240b36 0%, #110521 70%, #06020c 100%);
+      color: #fff;
+      font-family: 'Philosopher', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+    }
+    .card {
+      background: rgba(23, 10, 44, 0.9);
+      border: 2px solid var(--gold);
+      border-radius: 16px;
+      padding: 30px 24px;
+      max-width: 520px;
+      width: 100%;
+      box-shadow: 0 0 35px rgba(255, 215, 0, 0.4);
+    }
+    h1 {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 22px;
+      color: var(--gold);
+      margin-bottom: 8px;
+    }
+    p {
+      font-size: 14.5px;
+      color: #fff9c4;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+    .qr-box {
+      background: #fff;
+      padding: 12px;
+      border-radius: 12px;
+      display: inline-block;
+      margin: 10px 0 16px 0;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    }
+    .qr-box img {
+      width: 220px;
+      height: 220px;
+      display: block;
+    }
+    .url-badge {
+      background: rgba(45, 15, 75, 0.8);
+      border: 1px dashed var(--gold);
+      border-radius: 25px;
+      padding: 10px 18px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #ffd700;
+      letter-spacing: 0.5px;
+      margin-bottom: 20px;
+      display: inline-block;
+      word-break: break-all;
+    }
+    .steps {
+      text-align: left;
+      background: rgba(30, 10, 50, 0.7);
+      border-left: 3px solid var(--saffron);
+      border-radius: 0 8px 8px 0;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      font-size: 13.5px;
+      line-height: 1.6;
+    }
+    .steps ol {
+      padding-left: 20px;
+    }
+    .btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #ff8f00, #ff6f00, #e65100);
+      color: #fff;
+      border: 1px solid var(--gold);
+      padding: 10px 24px;
+      border-radius: 25px;
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 13px;
+      text-decoration: none;
+      transition: all 0.2s;
+      box-shadow: 0 4px 15px rgba(230, 81, 0, 0.5);
+    }
+    .btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px var(--gold);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div style="font-size: 20px; color: var(--gold); margin-bottom: 6px;">📱 ॐ 📱</div>
+    <h1>Play Worldwide on Any Phone</h1>
+    <p>Scan this QR code with any phone's camera, or send the public link to your friends (works on mobile data & Wi-Fi anywhere):</p>
+
+    <div class="qr-box">
+      <img src="public_qr.png" alt="Scan to play on phone">
+    </div>
+
+    <div>
+      <a href="https://choosing-scoring-gordon-org.trycloudflare.com" target="_blank" class="url-badge" style="text-decoration:none;">https://choosing-scoring-gordon-org.trycloudflare.com</a>
+    </div>
+
+    <div class="steps">
+      <strong>How to Play:</strong>
+      <ol>
+        <li>Open your phone's <strong>Camera</strong> app and point it at the QR code above, or tap the link.</li>
+        <li>Works on any network (4G/5G mobile data or Wi-Fi) on iPhone and Android.</li>
+        <li>Tap <strong>"Start Level"</strong> to unlock divine music and start playing with on-screen controls!</li>
+        <li>Rotate phone to <strong>Landscape mode</strong> for the ultimate adventure experience.</li>
+      </ol>
+    </div>
+
+    <div style="margin-bottom: 15px; font-size: 13px; color: #aaa;">
+      Local Wi-Fi link (same router only): <code style="color:#ffd700;">http://192.168.55.107:8080/index.html</code>
+    </div>
+
+    <a href="index.html" class="btn">Play on PC Instead ➔</a>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ganesha: The Divine Beginning – 90s Demo Video Showcase</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Philosopher:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --gold: #ffd700;
+      --saffron: #ff6f00;
+      --dark: #0a0314;
+      --card-bg: rgba(22, 8, 42, 0.9);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at center, #1b0730 0%, #0c0218 70%, #030008 100%);
+      color: #fff;
+      font-family: 'Philosopher', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 18px;
+    }
+    h1 {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 26px;
+      color: var(--gold);
+      text-shadow: 0 0 14px var(--saffron);
+      letter-spacing: 1px;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: #ffcc80;
+      margin-top: 4px;
+    }
+    .player-container {
+      width: 960px;
+      max-width: 100%;
+      background: #000;
+      border: 2px solid var(--gold);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 35px rgba(255, 215, 0, 0.4), 0 0 70px rgba(0,0,0,0.9);
+      position: relative;
+    }
+    video {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: #000;
+    }
+    .timeline-nav {
+      width: 960px;
+      max-width: 100%;
+      margin-top: 16px;
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 215, 0, 0.35);
+      border-radius: 10px;
+      padding: 14px 18px;
+    }
+    .timeline-title {
+      font-size: 13px;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+      text-align: center;
+      font-weight: bold;
+    }
+    .scene-buttons {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 8px;
+    }
+    .scene-btn {
+      background: rgba(45, 15, 75, 0.7);
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      color: #fff9c4;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s;
+    }
+    .scene-btn:hover {
+      background: var(--saffron);
+      border-color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 0 10px var(--gold);
+    }
+    .scene-time {
+      color: var(--gold);
+      font-weight: bold;
+      display: block;
+      font-size: 10.5px;
+    }
+    .actions-bar {
+      margin-top: 16px;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .action-btn {
+      background: linear-gradient(135deg, #ff8f00, #ff6f00, #d84315);
+      color: #fff;
+      border: 1px solid var(--gold);
+      padding: 10px 22px;
+      border-radius: 25px;
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 13px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 15px rgba(230, 81, 0, 0.5);
+    }
+    .action-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px var(--gold);
+    }
+    .action-btn.secondary {
+      background: rgba(45, 15, 75, 0.9);
+      border-color: rgba(255, 215, 0, 0.5);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Ganesha: The Divine Beginning</h1>
+    <p class="subtitle">Chapter 1: The Birth of Ganesha — 90-Second Cinematic Demo Video</p>
+  </header>
+
+  <!-- Video Player -->
+  <div class="player-container">
+    <video id="demoVideo" controls autoplay loop playsinline poster="">
+      <source src="demo_video.mp4" type="video/mp4">
+      Your browser does not support the video tag.
+    </video>
+  </div>
+
+  <!-- Interactive Timeline Jump Navigation -->
+  <div class="timeline-nav">
+    <div class="timeline-title">📜 Exact 90-Second Scene Timeline (Click to Jump)</div>
+    <div class="scene-buttons">
+      <button class="scene-btn" onclick="jumpTo(0)">
+        <span class="scene-time">0–8 sec</span>
+        🔱 Opening: The Divine Beginning
+      </button>
+      <button class="scene-btn" onclick="jumpTo(8)">
+        <span class="scene-time">8–18 sec</span>
+        🌺 Level 1: Divine Creation (Tutorial)
+      </button>
+      <button class="scene-btn" onclick="jumpTo(18)">
+        <span class="scene-time">18–28 sec</span>
+        🛡️ Level 2: Palace Guardian (Gates)
+      </button>
+      <button class="scene-btn" onclick="jumpTo(28)">
+        <span class="scene-time">28–38 sec</span>
+        ❄️ Level 3: Arrival of Shiva (Cutscene)
+      </button>
+      <button class="scene-btn" onclick="jumpTo(38)">
+        <span class="scene-time">38–50 sec</span>
+        ⚔️ Level 4: Guardian's Challenge (Mini-Boss)
+      </button>
+      <button class="scene-btn" onclick="jumpTo(50)">
+        <span class="scene-time">50–63 sec</span>
+        🕉️ Level 5: Divine Duel (Boss Trial)
+      </button>
+      <button class="scene-btn" onclick="jumpTo(63)">
+        <span class="scene-time">63–73 sec</span>
+        ✨ Level 6: Parvati's Divine Power (Orbs)
+      </button>
+      <button class="scene-btn" onclick="jumpTo(73)">
+        <span class="scene-time">73–82 sec</span>
+        🌲 Level 7: Search for the Elephant (Gate)
+      </button>
+      <button class="scene-btn" onclick="jumpTo(82)">
+        <span class="scene-time">82–90 sec</span>
+        🐘 Level 8: Birth of Ganesha & Chapter 2
+      </button>
+    </div>
+  </div>
+
+  <div class="actions-bar">
+    <a href="index.html" class="action-btn">🎮 Play the Full Game</a>
+    <a href="demo_video.mp4" download="Ganesha_Chapter1_Demo_Video.mp4" class="action-btn secondary">⬇️ Download Video (MP4)</a>
+  </div>
+
+  <script>
+    const vid = document.getElementById('demoVideo');
+    function jumpTo(sec) {
+      vid.currentTime = sec;
+      vid.play();
+    }
+  </script>
+</body>
+</html>
