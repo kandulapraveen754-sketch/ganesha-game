@@ -753,5 +753,12 @@
   <audio id="bg-music-player" preload="auto" loop playsinline></audio>
 
   <script src="script.js"></script>
+<script>
+  const bgMusic = document.getElementById("bgMusic");
+
+  document.addEventListener("click", function () {
+    bgMusic.play();
+  }, { once: true });
+</script>
 </body>
 </html>
