@@ -5968,15 +5968,27 @@ class GameEngine {
   openWardrobeModal() {
     sounds.playClick();
     this.loadSkins();
-    this.wardrobePreviewSkin = this.selectedSkin;
+    this.wardrobePreviewSkin = this.selectedSkin || 'classic';
     this.updateWardrobeUI();
-    document.getElementById('settings-modal').classList.add('hidden');
-    document.getElementById('player-profile-modal').classList.add('hidden');
-    document.getElementById('profile-dashboard-modal').classList.add('hidden');
-    document.getElementById('leaderboard-modal').classList.add('hidden');
-    document.getElementById('daily-reward-modal').classList.add('hidden');
+
+    const hideModalIds = [
+      'settings-modal', 'player-profile-modal', 'profile-dashboard-modal',
+      'leaderboard-modal', 'daily-reward-modal', 'chapter-select-modal',
+      'chapters-index-modal', 'level-select-modal', 'pause-modal', 'game-over-modal'
+    ];
+    hideModalIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.add('hidden');
+        el.style.display = 'none';
+      }
+    });
+
     const modal = document.getElementById('avatar-wardrobe-modal');
-    if (modal) modal.classList.remove('hidden');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+    }
     this.inModal = true;
     this.initWardrobeParticles();
     this.startWardrobePreviewLoop();
@@ -7491,13 +7503,42 @@ class GameEngine {
       btnDashWardrobe.addEventListener('click', () => this.openWardrobeModal());
     }
 
+    const btnHudWardrobe = document.getElementById('btn-hud-wardrobe');
+    if (btnHudWardrobe) {
+      btnHudWardrobe.addEventListener('click', () => this.openWardrobeModal());
+    }
+
+    const btnPauseWardrobe = document.getElementById('btn-pause-wardrobe');
+    if (btnPauseWardrobe) {
+      btnPauseWardrobe.addEventListener('click', () => this.openWardrobeModal());
+    }
+
+    const btnSettingsWardrobe = document.getElementById('btn-settings-wardrobe');
+    if (btnSettingsWardrobe) {
+      btnSettingsWardrobe.addEventListener('click', () => this.openWardrobeModal());
+    }
+
     const btnCloseWardrobe = document.getElementById('btn-close-wardrobe');
     if (btnCloseWardrobe) {
       btnCloseWardrobe.addEventListener('click', () => {
         sounds.playClick();
-        document.getElementById('avatar-wardrobe-modal').classList.add('hidden');
+        const modal = document.getElementById('avatar-wardrobe-modal');
+        if (modal) {
+          modal.classList.add('hidden');
+          modal.style.display = 'none';
+        }
         if (this.isInMainMenu) {
-          document.getElementById('main-menu-overlay').classList.remove('hidden');
+          const menu = document.getElementById('main-menu-overlay');
+          if (menu) {
+            menu.classList.remove('hidden');
+            menu.style.display = 'flex';
+          }
+        } else if (this.isPaused) {
+          const pauseM = document.getElementById('pause-modal');
+          if (pauseM) {
+            pauseM.classList.remove('hidden');
+            pauseM.style.display = 'flex';
+          }
         }
         this.inModal = false;
       });
