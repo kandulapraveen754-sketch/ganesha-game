@@ -2048,9 +2048,13 @@ class Player {
 
     this.skillCooldown = 0;
     this.invulnerableTimer = 0;
+    this.isInvulnerable = false;
+    this.hitCooldown = 0;
+    this.collisionCooldown = 0;
     this.walkCycle = 0;
     this.boostTimer = 0;
     this.divineAuraTimer = 0;
+    this.standingPlatform = null;
   }
 
   update(input, platforms, particles) {
@@ -2063,7 +2067,14 @@ class Player {
     }
 
     if (this.skillCooldown > 0) this.skillCooldown--;
-    if (this.invulnerableTimer > 0) this.invulnerableTimer--;
+    if (this.invulnerableTimer > 0) {
+      this.invulnerableTimer--;
+      this.isInvulnerable = true;
+    } else {
+      this.isInvulnerable = false;
+    }
+    if (this.hitCooldown > 0) this.hitCooldown--;
+    if (this.collisionCooldown > 0) this.collisionCooldown--;
     if (this.boostTimer > 0) this.boostTimer--;
 
     const isRide = game && (game.currentLevelIndex === 10 || game.currentLevelIndex === 17 || game.currentLevelIndex === 22);
@@ -2149,72 +2160,126 @@ class Player {
     this.isGrounded = false;
     this.checkVerticalCollisions(platforms);
 
+    // Ride with moving platform if standing on one
+    if (this.isGrounded && this.standingPlatform && this.standingPlatform.isMovingPlatform) {
+      this.x += (this.standingPlatform.dx || 0);
+      this.y += (this.standingPlatform.dy || 0);
+    }
+
+    if (this.x < 0) this.x = 0;
+
     // World Bounds
-    if (this.y > 600) {
+    if (this.y > 640) {
       this.health = 0;
-      game.loseLife("Fell into the abyss");
+      if (typeof game !== 'undefined' && game.loseLife) {
+        game.loseLife("Fell into the abyss", true);
+      }
     }
   }
 
   checkHorizontalCollisions(platforms) {
     for (const p of platforms) {
-      if (p.isPassable) continue;
-      if (this.x < p.x + p.w && this.x + this.width > p.x &&
-          this.y < p.y + p.h && this.y + this.height > p.y) {
-        if (this.vx > 0) {
-          this.x = p.x - this.width;
-          this.vx = 0;
-        } else if (this.vx < 0) {
-          this.x = p.x + p.w;
-          this.vx = 0;
+      if (p.isPassable || p.isOpen || p.isOneWay) continue;
+      const pw = p.width !== undefined ? p.width : (p.w !== undefined ? p.w : 0);
+      const ph = p.height !== undefined ? p.height : (p.h !== undefined ? p.h : 0);
+
+      // Only check horizontal wall collision if player's body is inside vertical span (not resting on top)
+      if (this.y + this.height - 6 > p.y && this.y + 6 < p.y + ph) {
+        if (this.x < p.x + pw && this.x + this.width > p.x) {
+          if (this.vx > 0) {
+            this.x = p.x - this.width;
+            this.vx = 0;
+          } else if (this.vx < 0) {
+            this.x = p.x + pw;
+            this.vx = 0;
+          }
         }
       }
     }
   }
 
   checkVerticalCollisions(platforms) {
+    this.standingPlatform = null;
     for (const p of platforms) {
-      if (this.x + this.width > p.x && this.x < p.x + p.w) {
+      if (p.isOpen || p.isPassable) continue;
+      const pw = p.width !== undefined ? p.width : (p.w !== undefined ? p.w : 0);
+      const ph = p.height !== undefined ? p.height : (p.h !== undefined ? p.h : 0);
+
+      // Must overlap horizontally with platform
+      if (this.x + this.width > p.x + 2 && this.x < p.x + pw - 2) {
         if (p.isOneWay) {
-          if (this.vy >= 0 && this.y + this.height >= p.y && this.y + this.height <= p.y + 16 && (this.y + this.height - this.vy) <= p.y + 4) {
+          if (this.vy >= 0 && (this.y + this.height) >= p.y && (this.y + this.height - this.vy) <= p.y + 14) {
             this.y = p.y - this.height;
             this.vy = 0;
             this.isGrounded = true;
+            this.standingPlatform = p;
           }
         } else {
-          if (this.y < p.y + p.h && this.y + this.height > p.y) {
-            if (this.vy > 0) {
-              this.y = p.y - this.height;
-              this.vy = 0;
-              this.isGrounded = true;
-            } else if (this.vy < 0) {
-              this.y = p.y + p.h;
-              this.vy = 0;
-            }
+          const prevBottom = this.y + this.height - this.vy;
+          // Landing on platform from above
+          if (this.vy >= 0 && (this.y + this.height) >= p.y && prevBottom <= p.y + 18 && (this.y + this.height) <= p.y + ph + 10) {
+            this.y = p.y - this.height;
+            this.vy = 0;
+            this.isGrounded = true;
+            this.standingPlatform = p;
+          } else if (this.vy < 0 && this.y <= p.y + ph && (this.y - this.vy) >= p.y + ph - 8) {
+            // Ceiling hit
+            this.y = p.y + ph;
+            this.vy = 0;
           }
         }
       }
     }
   }
 
-  takeDamage(amount = 20, source = "Enemy") {
-    if (this.invulnerableTimer > 0) return;
+  takeDamage(amount = 20, source = "Enemy", fromX = null) {
+    if (this.isInvulnerable || this.invulnerableTimer > 0 || this.hitCooldown > 0) return false;
     this.health = Math.max(0, this.health - amount);
-    this.invulnerableTimer = 40;
+    this.invulnerableTimer = 55; // ~0.9s invulnerability at 60fps
+    this.isInvulnerable = true;
+    this.hitCooldown = 55;
+
+    // Smooth knockback and safe separation away from damage source
+    const centerSourceX = (fromX !== null && Number.isFinite(fromX)) ? fromX : (this.facing > 0 ? this.x + this.width + 10 : this.x - 10);
+    const pushDir = (this.x + this.width / 2 < centerSourceX) ? -1 : 1;
+    this.vx = pushDir * 5.2;
+    this.vy = -4.5;
+    this.x += pushDir * 10; // Instantly separate bounding boxes
+
     sounds.playHurt();
-    particles.emitSparks(this.x + this.width / 2, this.y + this.height / 2, 8, '#ff5252');
-    game.triggerVibrate(60);
+    particles.emitSparks(this.x + this.width / 2, this.y + this.height / 2, 12, '#ff5252');
+    if (typeof game !== 'undefined' && game && game.triggerVibrate) game.triggerVibrate(60);
 
     if (this.health <= 0) {
-      game.loseLife(source);
+      if (typeof game !== 'undefined' && game && game.loseLife) {
+        game.loseLife(source, true);
+      }
     }
+    return true;
   }
 
-  hitHazard() {
-    if (this.invulnerableTimer > 0) return;
+  hitHazard(source = "Obstacle", fromX = null) {
+    if (this.isInvulnerable || this.invulnerableTimer > 0 || this.hitCooldown > 0) return false;
     this.health = Math.max(0, this.health - 25);
-    this.invulnerableTimer = 45;
-    game.loseLife("Obstacle");
+    this.invulnerableTimer = 55;
+    this.isInvulnerable = true;
+    this.hitCooldown = 55;
+
+    const centerSourceX = (fromX !== null && Number.isFinite(fromX)) ? fromX : (this.facing > 0 ? this.x + this.width + 10 : this.x - 10);
+    const pushDir = (this.x + this.width / 2 < centerSourceX) ? -1 : 1;
+    this.vx = pushDir * 5.2;
+    this.vy = -4.5;
+    this.x += pushDir * 10;
+
+    sounds.playHurt();
+    particles.emitSparks(this.x + this.width / 2, this.y + this.height / 2, 12, '#ff5252');
+
+    if (this.health <= 0) {
+      if (typeof game !== 'undefined' && game && game.loseLife) {
+        game.loseLife(source, true);
+      }
+    }
+    return true;
   }
 
   draw(ctx, cameraX) {
@@ -2695,7 +2760,7 @@ class FallingRock {
         player.y < this.y + this.height &&
         player.y + player.height > this.y
       ) {
-        player.takeDamage(20);
+        player.takeDamage(20, "Falling Rock", this.x + 15);
         this.isShattered = true;
         particles.emitSparks(this.x + 15, this.y + 15, 12, '#8d6e63');
       }
@@ -2916,11 +2981,22 @@ class Enemy {
       this.checkVerticalCollisions(platforms);
     }
 
-    // 2. Player Touch Damage
-    if (this.collidesWith(player) && this.attackCooldown <= 0) {
-      player.takeDamage(this.damage);
-      this.attackCooldown = 40;
-      particles.emitSparks(player.x + player.width / 2, player.y + player.height / 2, 8, '#ff1744');
+    // 2. Player Touch Damage & Safe Separation
+    if (this.collidesWith(player)) {
+      if (this.attackCooldown <= 0 && !player.isInvulnerable && player.invulnerableTimer <= 0) {
+        player.takeDamage(this.damage, this.type || "Enemy", this.x + this.width / 2);
+        this.attackCooldown = 55; // 0.9s attack cooldown
+        particles.emitSparks(player.x + player.width / 2, player.y + player.height / 2, 8, '#ff1744');
+      } else {
+        // Safe spatial separation if overlapping during invulnerability
+        const pMid = player.x + player.width / 2;
+        const eMid = this.x + this.width / 2;
+        if (pMid < eMid) {
+          player.x = Math.max(0, this.x - player.width - 2);
+        } else {
+          player.x = this.x + this.width + 2;
+        }
+      }
     }
 
     if (game && game.defenseTarget && this.collidesWith(game.defenseTarget) && this.attackCooldown <= 0) {
@@ -3196,14 +3272,25 @@ class AsuraWarlordBoss {
       particles.emitSparks(this.x + this.width / 2, this.y + this.height / 2, 25, '#ffd700');
     }
 
-    // Player touch collision
+    // Player touch collision & safe separation
     if (
       player.x < this.x + this.width &&
       player.x + player.width > this.x &&
       player.y < this.y + this.height &&
       player.y + player.height > this.y
     ) {
-      player.takeDamage(this.damage);
+      if (this.attackCooldown <= 0 && !player.isInvulnerable && player.invulnerableTimer <= 0) {
+        player.takeDamage(this.damage, "Asura Warlord Boss", this.x + this.width / 2);
+        this.attackCooldown = 55;
+      } else {
+        const pMid = player.x + player.width / 2;
+        const bMid = this.x + this.width / 2;
+        if (pMid < bMid) {
+          player.x = Math.max(0, this.x - player.width - 3);
+        } else {
+          player.x = this.x + this.width + 3;
+        }
+      }
     }
   }
 
@@ -3339,7 +3426,9 @@ class ShivaBoss {
     } else if (this.timer % 150 === 90) {
       particles.emitAuraRing(this.x + this.width / 2, this.y + this.height / 2, 140, '#00e5ff');
       if (Math.hypot(player.x - this.x, player.y - this.y) < 140) {
-        player.takeDamage(15);
+        if (!player.isInvulnerable && player.invulnerableTimer <= 0) {
+          player.takeDamage(15, "Trident Pulse", this.x + this.width / 2);
+        }
       }
     } else if (this.timer % 150 === 130) {
       particles.emitSparks(this.x + this.width / 2, this.y + this.height / 2, 20, '#ffd700');
@@ -3703,7 +3792,9 @@ class Projectile {
       this.y < player.y + player.height &&
       this.y + this.height > player.y
     ) {
-      player.takeDamage(this.damage);
+      if (!player.isInvulnerable && player.invulnerableTimer <= 0) {
+        player.takeDamage(this.damage, this.type || "Energy Bolt", this.x);
+      }
       this.isAlive = false;
       particles.emitSparks(this.x, this.y, 6, '#00e5ff');
     }
@@ -3942,7 +4033,9 @@ class SacredRiver {
     ) {
       particles.emitSparks(player.x + player.width / 2, this.y + 10, 14, this.type === 'light' ? '#00e5ff' : '#64b5f6');
       sounds.playWaterSplash();
-      game.loseLife("Sacred River");
+      if (typeof game !== 'undefined' && game.loseLife) {
+        game.loseLife("Sacred River", true);
+      }
     }
   }
 
@@ -4231,7 +4324,7 @@ class ObstacleTrap {
       player.y + player.height > this.y
     ) {
       if (player.invulnerableTimer <= 0) {
-        player.takeDamage(1);
+        player.takeDamage(18, "Spike Trap");
       }
     }
   }
@@ -5310,12 +5403,12 @@ class GameEngine {
     this.isCountingDown = false;
 
     this.cameraX = 0;
-    this.checkpoint = { x: 60, y: 380 };
+    this.checkpoint = { x: 60, y: 404 };
     this.isInMainMenu = true;
     this.isPaused = true;
     this.inModal = false;
 
-    this.player = new Player(60, 380);
+    this.player = new Player(60, 404);
     this.platforms = [];
     this.movingPlatforms = [];
     this.rivers = [];
@@ -7075,35 +7168,45 @@ class GameEngine {
       this.loadLevel(this.currentLevelIndex);
     });
 
-    const btnRetry = document.getElementById('btn-retry');
-    if (btnRetry) {
-      btnRetry.addEventListener('click', () => {
-        document.getElementById('game-over-modal').classList.add('hidden');
-        this.inModal = false;
-        this.isPaused = false;
-        this.loadLevel(this.currentLevelIndex);
-      });
-    }
+    const addModalTap = (btnId, handler) => {
+      const el = document.getElementById(btnId);
+      if (!el) return;
+      let lastTap = 0;
+      const execute = (e) => {
+        const now = Date.now();
+        if (now - lastTap < 300) return;
+        lastTap = now;
+        handler(e);
+      };
+      el.addEventListener('click', execute);
+      el.addEventListener('pointerdown', execute);
+    };
 
-    const btnRestartFail = document.getElementById('btn-restart-from-fail');
-    if (btnRestartFail) {
-      btnRestartFail.addEventListener('click', () => {
-        document.getElementById('game-over-modal').classList.add('hidden');
-        this.inModal = false;
-        this.isPaused = false;
-        this.loadLevel(this.currentLevelIndex);
-      });
-    }
+    addModalTap('btn-retry', () => {
+      const modal = document.getElementById('game-over-modal');
+      if (modal) modal.classList.add('hidden');
+      this.inModal = false;
+      this.isPaused = false;
+      this.lives = 3;
+      this.updateLivesDisplay();
+      this.loadLevel(this.currentLevelIndex);
+    });
 
-    const btnFailHome = document.getElementById('btn-fail-home');
-    if (btnFailHome) {
-      btnFailHome.addEventListener('click', () => {
-        document.getElementById('game-over-modal').classList.add('hidden');
-        this.inModal = false;
-        this.isPaused = false;
-        this.returnToMainMenu();
-      });
-    }
+    addModalTap('btn-restart-from-fail', () => {
+      const modal = document.getElementById('game-over-modal');
+      if (modal) modal.classList.add('hidden');
+      this.inModal = false;
+      this.isPaused = false;
+      this.loadLevel(this.currentLevelIndex);
+    });
+
+    addModalTap('btn-fail-home', () => {
+      const modal = document.getElementById('game-over-modal');
+      if (modal) modal.classList.add('hidden');
+      this.inModal = false;
+      this.isPaused = false;
+      this.returnToMainMenu();
+    });
 
     // Level Select Modal
     const openLevelSelect = () => {
@@ -8335,9 +8438,9 @@ class GameEngine {
     this.divineSymbolsCollected = 0;
     this.lotusSwitchesActive = 0;
     this.isCountingDown = false;
-    this.checkpoint = { x: 60, y: 380 };
+    this.checkpoint = { x: 60, y: 404 };
 
-    this.player = new Player(60, 380);
+    this.player = new Player(60, 404);
     this.platforms = [...cfg.platforms];
     this.movingPlatforms = cfg.movingPlatforms ? cfg.movingPlatforms.map(m => new MovingPlatform(m.x, m.y, m.width, m.height, m.moveX || 0, m.moveY || 0, m.speed || 0.03)) : [];
     this.rivers = cfg.rivers ? cfg.rivers.map(r => new SacredRiver(r.x, r.y, r.width, r.height, r.type)) : [];
@@ -9067,30 +9170,49 @@ class GameEngine {
   }
 
   respawnPlayer() {
-    this.player.x = this.checkpoint.x;
-    this.player.y = this.checkpoint.y;
+    if (!this.player) return;
+    const spawnX = (this.checkpoint && Number.isFinite(this.checkpoint.x)) ? this.checkpoint.x : 60;
+    const spawnY = (this.checkpoint && Number.isFinite(this.checkpoint.y)) ? this.checkpoint.y : 404;
+    this.player.x = spawnX;
+    this.player.y = spawnY;
     this.player.vx = 0;
     this.player.vy = 0;
+    this.player.isGrounded = true;
+    this.player.standingPlatform = null;
+    this.player.invulnerableTimer = 90;
+    this.cameraX = Math.max(0, spawnX - 250);
   }
 
-  loseLife(reason = "Hazard") {
-    if (this.player.invulnerableTimer > 0) return;
-    this.lives = Math.max(0, this.lives - 1);
-    sounds.playHit();
-    this.updateLivesDisplay();
-    const heartsEl = document.getElementById('lives-display') || document.getElementById('lives-hearts');
-    if (heartsEl) {
-      heartsEl.classList.add('hurt');
-      setTimeout(() => heartsEl.classList.remove('hurt'), 600);
-    }
-    this.particles.emitSparks(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2, 20, '#ff5252');
+  loseLife(reason = "Hazard", force = false) {
+    if (this.isProcessingLifeLoss) return; // Prevent recursive calls
+    if (!force && this.player && (this.player.isInvulnerable || this.player.invulnerableTimer > 0)) return;
 
-    if (this.lives <= 0) {
-      this.onGameOver(reason);
-    } else {
-      this.respawnPlayer();
-      this.player.invulnerableTimer = 90;
-      this.player.health = this.player.maxHealth;
+    this.isProcessingLifeLoss = true;
+    try {
+      this.lives = Math.max(0, this.lives - 1);
+      sounds.playHit();
+      this.updateLivesDisplay();
+      const heartsEl = document.getElementById('lives-display') || document.getElementById('lives-hearts');
+      if (heartsEl) {
+        heartsEl.classList.add('hurt');
+        setTimeout(() => heartsEl.classList.remove('hurt'), 600);
+      }
+      if (this.particles && this.player) {
+        this.particles.emitSparks(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2, 20, '#ff5252');
+      }
+
+      if (this.lives <= 0) {
+        this.onGameOver(reason);
+      } else {
+        this.respawnPlayer();
+        if (this.player) {
+          this.player.health = this.player.maxHealth;
+          this.player.invulnerableTimer = 90;
+          this.player.isInvulnerable = true;
+        }
+      }
+    } finally {
+      this.isProcessingLifeLoss = false;
     }
   }
 
@@ -9152,8 +9274,10 @@ class GameEngine {
     document.getElementById('health-bar').style.width = `${Math.max(0, (this.player.health / this.player.maxHealth) * 100)}%`;
     document.getElementById('health-text').textContent = `${Math.ceil(this.player.health)} / 100`;
 
-    document.getElementById('energy-bar').style.width = `${Math.max(0, (this.player.energy / this.player.maxEnergy) * 100)}%`;
-    document.getElementById('energy-text').textContent = `${Math.ceil(this.player.energy)} / 100`;
+    const energyBar = document.getElementById('energy-bar');
+    if (energyBar && this.player) energyBar.style.width = `${Math.max(0, (this.player.energy / this.player.maxEnergy) * 100)}%`;
+    const energyText = document.getElementById('energy-text');
+    if (energyText && this.player) energyText.textContent = `${Math.ceil(this.player.energy)} / 100`;
 
     if (this.defenseTarget) {
       const defPct = Math.max(0, (this.defenseTarget.health / this.defenseTarget.maxHealth) * 100);
@@ -9188,11 +9312,20 @@ class GameEngine {
     const dt = timestamp - this.lastTime;
     this.lastTime = timestamp;
 
-    if (!this.isPaused && !this.inModal) {
-      this.update();
+    try {
+      if (!this.isPaused && !this.inModal) {
+        this.update();
+      }
+    } catch (err) {
+      console.error("Safety guard caught error during game.update:", err);
     }
 
-    this.render();
+    try {
+      this.render();
+    } catch (err) {
+      console.error("Safety guard caught error during game.render:", err);
+    }
+
     requestAnimationFrame((t) => this.loop(t));
   }
 
@@ -9500,6 +9633,14 @@ class GameEngine {
 // 8. LAUNCH GAME INSTANCE
 // ==========================================================================
 let game;
-window.addEventListener('DOMContentLoaded', () => {
-  game = new GameEngine();
-});
+function initGame() {
+  if (!game) {
+    game = new GameEngine();
+    window.game = game;
+  }
+}
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', initGame);
+} else {
+  initGame();
+}
