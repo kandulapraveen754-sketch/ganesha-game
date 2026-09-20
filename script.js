@@ -5532,55 +5532,56 @@ class GameEngine {
     const intro = document.getElementById('cinematic-intro-screen');
     if (!intro) return;
 
-    // Sequence Stage 1 (0.8s): Soft temple bell & warm temple light reveal
+    // Fast dynamic progression so user is never waiting or stuck
+    // Sequence Stage 1 (0.4s): Soft temple bell & warm temple light reveal
     this.introTimers.push(setTimeout(() => {
       if (intro && !this.introFinished) {
         intro.classList.add('phase-reveal-temple');
         sounds.playTempleBell(880);
       }
-    }, 800));
+    }, 400));
 
-    // Sequence Stage 2 (2.2s): Divine center glow & radiance
+    // Sequence Stage 2 (1.4s): Divine center glow & radiance
     this.introTimers.push(setTimeout(() => {
       if (intro && !this.introFinished) {
         intro.classList.add('phase-divine-glow');
       }
-    }, 2200));
+    }, 1400));
 
-    // Sequence Stage 3 (3.6s): Lord Vinayaka artwork reveal with cinematic camera push-in
+    // Sequence Stage 3 (2.4s): Lord Vinayaka artwork reveal with cinematic camera push-in
     this.introTimers.push(setTimeout(() => {
       if (intro && !this.introFinished) {
         intro.classList.add('phase-artwork-reveal');
       }
-    }, 3600));
+    }, 2400));
 
-    // Sequence Stage 4 (5.2s): “🙏 VINAYAKA 🙏” title reveal + high bell chime
+    // Sequence Stage 4 (3.5s): “🙏 VINAYAKA 🙏” title reveal + high bell chime
     this.introTimers.push(setTimeout(() => {
       if (intro && !this.introFinished) {
         intro.classList.add('phase-title-reveal');
         sounds.playTempleBell(1174.66);
       }
-    }, 5200));
+    }, 3500));
 
-    // Sequence Stage 5 (6.8s): “THE DIVINE ADVENTURE” subtitle + musical rise
+    // Sequence Stage 5 (4.6s): “THE DIVINE ADVENTURE” subtitle + musical rise
     this.introTimers.push(setTimeout(() => {
       if (intro && !this.introFinished) {
         intro.classList.add('phase-adventure-reveal');
         sounds.ensureMusicPlaying();
       }
-    }, 6800));
+    }, 4600));
 
-    // Sequence Stage 6 (8.4s): “A Divine Journey Begins…” phrase
+    // Sequence Stage 6 (5.6s): “A Divine Journey Begins…” phrase
     this.introTimers.push(setTimeout(() => {
       if (intro && !this.introFinished) {
         intro.classList.add('phase-begins-reveal');
       }
-    }, 8400));
+    }, 5600));
 
-    // Sequence Stage 7 (10.6s): Smooth fade into the Welcome Screen
+    // Sequence Stage 7 (6.8s): Smooth transition into the Welcome Screen
     this.introTimers.push(setTimeout(() => {
       this.finishCinematicIntro();
-    }, 10600));
+    }, 6800));
   }
 
   finishCinematicIntro() {
@@ -5602,14 +5603,14 @@ class GameEngine {
         if (welcomeScreen) {
           welcomeScreen.classList.remove('hidden');
         }
-      }, 950);
+      }, 500);
     } else if (welcomeScreen) {
       welcomeScreen.classList.remove('hidden');
     }
   }
 
   bindUI() {
-    // Cinematic Intro Skip Button & Tap to Skip
+    // Cinematic Intro Skip Button & Tap Anywhere on Intro Screen to Enter Immediately
     const btnSkipIntro = document.getElementById('btn-skip-intro');
     if (btnSkipIntro) {
       btnSkipIntro.addEventListener('click', (e) => {
@@ -5620,11 +5621,12 @@ class GameEngine {
 
     const introScreen = document.getElementById('cinematic-intro-screen');
     if (introScreen) {
-      introScreen.addEventListener('click', (e) => {
-        if (e.target && e.target.id === 'btn-skip-intro') return;
-        sounds.init();
-        sounds.ensureMusicPlaying();
+      introScreen.addEventListener('click', () => {
+        this.finishCinematicIntro();
       });
+      introScreen.addEventListener('touchstart', () => {
+        this.finishCinematicIntro();
+      }, { passive: true });
     }
 
     // Sound (SFX) Toggles
@@ -5938,36 +5940,48 @@ class GameEngine {
     // ======================================================================
     // 🕉️ START SYSTEM: WELCOME SCREEN, DEVOTEE LOGIN & MENU BINDINGS
     // ======================================================================
-    // 1. Welcome Screen Play Button
+    // 1. Welcome Screen Play Button & Tap Anywhere on Welcome Screen
     const btnWelcomePlay = document.getElementById('btn-welcome-play');
-    if (btnWelcomePlay) {
-      btnWelcomePlay.addEventListener('click', () => {
-        sounds.init();
-        sounds.ensureMusicPlaying();
-        this.triggerVibrate(30);
+    const welcomeScreen = document.getElementById('welcome-screen');
 
-        const welcomeScreen = document.getElementById('welcome-screen');
-        if (welcomeScreen) welcomeScreen.classList.add('hidden');
+    const handleWelcomeAdvance = () => {
+      sounds.init();
+      sounds.ensureMusicPlaying();
+      this.triggerVibrate(30);
 
-        // Check if player has ever saved their name in localStorage
-        const hasSavedName = localStorage.getItem('ganesha_player_name');
-        if (!hasSavedName || hasSavedName === 'Devotee') {
-          // First time player: show profile registration modal
-          const profileModal = document.getElementById('player-profile-modal');
-          if (profileModal) profileModal.classList.remove('hidden');
-          const cancelBtn = document.getElementById('btn-profile-cancel');
-          if (cancelBtn) cancelBtn.classList.add('hidden');
-          const nameInput = document.getElementById('player-name-input');
-          if (nameInput) {
-            nameInput.focus();
-            nameInput.select();
-          }
-        } else {
-          // Returning player: go straight to Main Menu
-          const mainMenu = document.getElementById('main-menu-overlay');
-          if (mainMenu) mainMenu.classList.remove('hidden');
-          sounds.playTrack('menu');
+      if (welcomeScreen) welcomeScreen.classList.add('hidden');
+
+      // Check if player has ever saved their name in localStorage
+      const hasSavedName = localStorage.getItem('ganesha_player_name');
+      if (!hasSavedName || hasSavedName === 'Devotee') {
+        // First time player: show profile registration modal
+        const profileModal = document.getElementById('player-profile-modal');
+        if (profileModal) profileModal.classList.remove('hidden');
+        const cancelBtn = document.getElementById('btn-profile-cancel');
+        if (cancelBtn) cancelBtn.classList.add('hidden');
+        const nameInput = document.getElementById('player-name-input');
+        if (nameInput) {
+          nameInput.focus();
+          nameInput.select();
         }
+      } else {
+        // Returning player: go straight to Main Menu
+        const mainMenu = document.getElementById('main-menu-overlay');
+        if (mainMenu) mainMenu.classList.remove('hidden');
+        sounds.playTrack('menu');
+      }
+    };
+
+    if (btnWelcomePlay) {
+      btnWelcomePlay.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleWelcomeAdvance();
+      });
+    }
+
+    if (welcomeScreen) {
+      welcomeScreen.addEventListener('click', () => {
+        handleWelcomeAdvance();
       });
     }
 
