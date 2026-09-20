@@ -3971,3 +3971,155 @@ body {
     font-size: 10px;
   }
 }
+
+/* ==========================================================================
+   🌌 7. EPIC WORLD TRANSFORMATION WOW MOMENT STYLES
+   ========================================================================== */
+.world-transformation-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 13000;
+  pointer-events: none;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Dark Vignette */
+.trans-dark-vignette {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.85) 75%, #000000 100%);
+  opacity: 0;
+  transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+.world-transformation-container.trans-darkening .trans-dark-vignette {
+  opacity: 1;
+}
+
+/* Divine Center Beacon */
+.trans-divine-beacon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.2);
+  width: min(500px, 85vw);
+  height: min(500px, 85vw);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(255, 215, 0, 0.6) 35%, rgba(255, 140, 0, 0.25) 60%, transparent 80%);
+  filter: blur(18px);
+  opacity: 0;
+  transition: opacity 0.8s ease-out, transform 1.6s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  pointer-events: none;
+}
+.world-transformation-container.trans-beacon-active .trans-divine-beacon {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.35);
+}
+
+/* Golden Screen Flash */
+.trans-golden-flash {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, #ffffff 10%, #fff9c4 40%, #ffd700 80%, #ff8f00 100%);
+  opacity: 0;
+  pointer-events: none;
+}
+.world-transformation-container.trans-flash-active .trans-golden-flash {
+  animation: transformationFlash 0.75s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+}
+
+@keyframes transformationFlash {
+  0% { opacity: 0; }
+  25% { opacity: 0.95; }
+  100% { opacity: 0; }
+}
+
+/* Transformation Canvas */
+.trans-particles-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Grand Announcement Banner */
+.trans-banner-stage {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  max-width: 680px;
+  width: 90%;
+  opacity: 0;
+  transform: scale(0.85) translateY(20px);
+  transition: opacity 0.8s ease-out, transform 0.8s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  pointer-events: none;
+  background: rgba(18, 4, 28, 0.85);
+  border: 2px solid var(--primary-gold);
+  border-radius: 18px;
+  padding: 16px 20px;
+  box-shadow: 0 0 45px rgba(255, 215, 0, 0.75), inset 0 0 25px rgba(255, 215, 0, 0.2);
+  backdrop-filter: blur(8px);
+}
+.world-transformation-container.trans-banner-show .trans-banner-stage {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+.trans-sacred-om {
+  font-family: var(--font-royal);
+  font-size: clamp(12px, 2.4vw, 15px);
+  color: #ffd700;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+  margin-bottom: 4px;
+}
+
+.trans-banner-title {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: clamp(20px, 4.8vw, 34px);
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #ffffff;
+  background: linear-gradient(180deg, #ffffff 0%, #fff9c4 35%, #ffd700 70%, #ff8f00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9), 0 0 30px rgba(255, 215, 0, 0.8);
+  margin: 2px 0 6px;
+}
+
+.trans-banner-subtitle {
+  font-family: 'Philosopher', serif;
+  font-style: italic;
+  font-size: clamp(13px, 2.5vw, 16px);
+  color: #ffe082;
+  letter-spacing: 1px;
+  text-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
+  margin: 0;
+}
+
+/* Transformation Screen Shake & Zoom */
+.transformation-camera-zoom {
+  animation: transCameraZoom 3.2s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes transCameraZoom {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.08) translate3d(0, -6px, 0); }
+  75% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+

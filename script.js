@@ -1916,10 +1916,13 @@ class Player {
     this.invulnerableTimer = 0;
     this.walkCycle = 0;
     this.boostTimer = 0;
+    this.divineAuraTimer = 0;
   }
 
   update(input, platforms, particles) {
     if (game && game.isCountingDown) return;
+
+    if (this.divineAuraTimer > 0) this.divineAuraTimer--;
 
     if (this.energy < this.maxEnergy) {
       this.energy = Math.min(this.maxEnergy, this.energy + this.energyRegen);
@@ -2072,13 +2075,22 @@ class Player {
 
     // Divine Golden Aura Ring
     const auraPulse = Math.sin(Date.now() * 0.005) * 3;
+    const isAwakened = this.divineAuraTimer > 0;
+    const auraRadius = isAwakened ? 42 + Math.sin(Date.now() * 0.008) * 5 : 34 + auraPulse;
     ctx.beginPath();
-    ctx.arc(0, -4, 34 + auraPulse, 0, Math.PI * 2);
-    ctx.fillStyle = this.boostTimer > 0 ? 'rgba(0, 229, 255, 0.35)' : 'rgba(255, 215, 0, 0.22)';
+    ctx.arc(0, -4, auraRadius, 0, Math.PI * 2);
+    if (isAwakened) {
+      ctx.fillStyle = 'rgba(255, 215, 0, 0.42)';
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 20;
+    } else {
+      ctx.fillStyle = this.boostTimer > 0 ? 'rgba(0, 229, 255, 0.35)' : 'rgba(255, 215, 0, 0.22)';
+    }
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 215, 0, 0.45)';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = isAwakened ? '#ffffff' : 'rgba(255, 215, 0, 0.45)';
+    ctx.lineWidth = isAwakened ? 2.5 : 1.5;
     ctx.stroke();
+    ctx.shadowBlur = 0;
 
     if (isRide) {
       // Mushika the Divine Mouse Vahana
@@ -5842,6 +5854,154 @@ class GameEngine {
       `;
       tbody.appendChild(tr);
     });
+  }
+
+  // ========================================================================
+  // 🌌 EPIC WORLD TRANSFORMATION WOW MOMENT CONTROLLER
+  // ========================================================================
+  triggerWorldTransformation() {
+    if (this.isTransforming) return;
+    this.isTransforming = true;
+    this.hasTriggeredTransformation = true;
+    try {
+      localStorage.setItem('ganesha_world_transformed', 'true');
+    } catch (_) {}
+
+    const overlay = document.getElementById('world-transformation-overlay');
+    if (!overlay) return;
+
+    overlay.classList.remove('hidden');
+    overlay.classList.remove('trans-darkening', 'trans-beacon-active', 'trans-flash-active', 'trans-banner-show');
+
+    // 1. (0.0s - 0.6s): Environment becomes quiet, BGM gently ducks down
+    if (sounds.masterGain && sounds.ctx) {
+      const now = sounds.ctx.currentTime;
+      sounds.masterGain.gain.linearRampToValueAtTime(0.12, now + 0.6);
+    }
+
+    // 2. (0.8s): Screen slowly darkens & camera shake begins with deep bell
+    setTimeout(() => {
+      overlay.classList.add('trans-darkening');
+      this.screenShake = 8;
+      this.triggerVibrate([40, 60, 40]);
+      sounds.playDeepTempleBell();
+      this.initTransformationParticles();
+    }, 800);
+
+    // 3. (2.0s): Golden particles swirl tightly and powerful divine beacon appears
+    setTimeout(() => {
+      overlay.classList.add('trans-beacon-active');
+      sounds.playConchAmbience();
+      this.screenShake = 12;
+      this.triggerVibrate([60, 80, 100]);
+    }, 2000);
+
+    // 4. (3.4s): Screen flashes with radiant golden light & THE WORLD TRANSFORMS!
+    setTimeout(() => {
+      overlay.classList.add('trans-flash-active');
+      sounds.playTitleImpact();
+      this.screenShake = 18;
+      this.triggerVibrate([100, 150, 200]);
+
+      // Dramatic environment shift: unlock cosmic aurora & divine realm aesthetics!
+      this.currentTheme = 'cosmic_journey';
+      if (this.currentLevelData) {
+        this.currentLevelData.theme = 'cosmic_journey';
+      }
+
+      // Restore and elevate music to majestic full volume
+      if (sounds.masterGain && sounds.ctx) {
+        const now = sounds.ctx.currentTime;
+        sounds.masterGain.gain.linearRampToValueAtTime(1.0, now + 0.8);
+      }
+      sounds.playTrack('chapter3');
+      sounds.playTitleChime();
+
+      // Camera panoramic zoom reveal
+      const gameCanvas = document.getElementById('gameCanvas');
+      if (gameCanvas) {
+        gameCanvas.classList.add('transformation-camera-zoom');
+        setTimeout(() => {
+          gameCanvas.classList.remove('transformation-camera-zoom');
+        }, 3400);
+      }
+    }, 3400);
+
+    // 5. (4.2s): Display Announcement Banner: “✨ DIVINE REALM AWAKENED ✨”
+    setTimeout(() => {
+      overlay.classList.add('trans-banner-show');
+      sounds.playTempleBell(1174.66);
+    }, 4200);
+
+    // 6. (7.2s): Smoothly fade out overlay & return control to player with divine aura
+    setTimeout(() => {
+      overlay.classList.add('hidden');
+      overlay.classList.remove('trans-darkening', 'trans-beacon-active', 'trans-flash-active', 'trans-banner-show');
+      this.isTransforming = false;
+      if (this.player) {
+        this.player.divineAuraTimer = 600; // 10 seconds of sparkling gold aura around Ganesha
+      }
+      sounds.playCollect();
+    }, 7200);
+  }
+
+  initTransformationParticles() {
+    const canvas = document.getElementById('transformationCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particles = [];
+    const colors = ['#ffd700', '#fff9c4', '#ff9100', '#00e5ff', '#e040fb', '#ffffff'];
+    const count = 90;
+
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        angle: Math.random() * Math.PI * 2,
+        dist: Math.random() * 340 + 40,
+        speed: (Math.random() * 0.035 + 0.015) * (Math.random() < 0.5 ? 1 : -1),
+        radius: Math.random() * 3.5 + 1.2,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        alpha: Math.random() * 0.85 + 0.15,
+        pulse: Math.random() * Math.PI * 2
+      });
+    }
+
+    const animate = () => {
+      const overlay = document.getElementById('world-transformation-overlay');
+      if (!overlay || overlay.classList.contains('hidden')) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+
+      for (let p of particles) {
+        p.angle += p.speed;
+        p.dist = Math.max(10, p.dist - 0.4);
+        p.pulse += 0.04;
+
+        const px = cx + Math.cos(p.angle) * p.dist;
+        const py = cy + Math.sin(p.angle) * (p.dist * 0.6) + Math.sin(p.pulse) * 10;
+
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.alpha * (0.6 + 0.4 * Math.sin(p.pulse)));
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(px, py, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      if (this.isTransforming) {
+        requestAnimationFrame(animate);
+      }
+    };
+    requestAnimationFrame(animate);
   }
 
   initWelcomeParticles() {
