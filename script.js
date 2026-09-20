@@ -1124,6 +1124,123 @@ class SoundEngine {
     });
   }
 
+  playDeepTempleBell() {
+    if (!this.soundEnabled || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const baseFreq = 220; // Deep resonant A3
+    [1.0, 2.0, 2.76, 4.07, 5.4].forEach((ratio, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(baseFreq * ratio, now);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.35 / (idx + 1), now + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 3.2 - idx * 0.4);
+      osc.connect(gain);
+      gain.connect(this.masterGain || this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 3.3);
+    });
+  }
+
+  playConchAmbience() {
+    if (!this.soundEnabled || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    try {
+      const osc1 = this.ctx.createOscillator();
+      const osc2 = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const filter = this.ctx.createBiquadFilter();
+      
+      osc1.type = 'sawtooth';
+      osc2.type = 'triangle';
+      osc1.frequency.setValueAtTime(220, now);
+      osc2.frequency.setValueAtTime(330, now);
+      
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(450, now);
+      filter.frequency.linearRampToValueAtTime(800, now + 1.2);
+      filter.frequency.linearRampToValueAtTime(350, now + 2.8);
+      filter.Q.value = 4.0;
+      
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.18, now + 0.9);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.9);
+      
+      osc1.connect(filter);
+      osc2.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.masterGain || this.ctx.destination);
+      
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 3.0);
+      osc2.stop(now + 3.0);
+    } catch (_) {}
+  }
+
+  playTitleImpact() {
+    if (!this.soundEnabled || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    try {
+      // 1. Sub-bass sine sweep
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(120, now);
+      osc.frequency.exponentialRampToValueAtTime(36, now + 0.45);
+      
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.40, now + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+      
+      osc.connect(gain);
+      gain.connect(this.masterGain || this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.95);
+
+      // 2. Resonant noise punch
+      const bufferSize = Math.floor(this.ctx.sampleRate * 0.3);
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.15));
+      }
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buffer;
+      const nFilter = this.ctx.createBiquadFilter();
+      nFilter.type = 'lowpass';
+      nFilter.frequency.setValueAtTime(350, now);
+      const nGain = this.ctx.createGain();
+      nGain.gain.setValueAtTime(0.25, now);
+      nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      
+      noise.connect(nFilter);
+      nFilter.connect(nGain);
+      nGain.connect(this.masterGain || this.ctx.destination);
+      noise.start(now);
+      noise.stop(now + 0.35);
+    } catch (_) {}
+  }
+
+  playTitleChime() {
+    if (!this.soundEnabled || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    [1046.50, 1318.51, 1567.98, 2093.00].forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+      gain.gain.setValueAtTime(0.001, now + idx * 0.06);
+      gain.gain.linearRampToValueAtTime(0.18, now + idx * 0.06 + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.06 + 1.4);
+      osc.connect(gain);
+      gain.connect(this.masterGain || this.ctx.destination);
+      osc.start(now + idx * 0.06);
+      osc.stop(now + idx * 0.06 + 1.5);
+    });
+  }
+
   playTempleBell(baseFreq = 880) {
     if (!this.soundEnabled || !this.ctx) return;
     if (this.bgm && typeof this.bgm.playTempleBell === 'function') {
@@ -5033,11 +5150,27 @@ class GameEngine {
     this.introTimers = [];
     this.vibrationEnabled = true;
 
-    // Load persisted progress, profile, settings & leaderboard
+    // Daily Divine Reward System (7-Day Calendar)
+    this.dailyRewardsList = [
+      { day: 1, title: '50 Coins', coins: 50, gems: 0, icon: '⭐', desc: '+50 Sacred Coins added to your treasury!' },
+      { day: 2, title: '100 Coins', coins: 100, gems: 0, icon: '⭐', desc: '+100 Sacred Coins added to your treasury!' },
+      { day: 3, title: 'Special Reward', coins: 120, gems: 1, icon: '🎁', desc: 'Special Blessing: 120 Coins + 1 Divine Elixir (+150 Score)!' },
+      { day: 4, title: '150 Coins', coins: 150, gems: 0, icon: '⭐', desc: '+150 Sacred Coins added to your treasury!' },
+      { day: 5, title: '1 Gem', coins: 100, gems: 1, icon: '💎', desc: '+1 Divine Gem (+200 Score) added to your treasury!' },
+      { day: 6, title: '250 Coins', coins: 250, gems: 0, icon: '⭐', desc: '+250 Sacred Coins added to your treasury!' },
+      { day: 7, title: 'Divine Chest', coins: 500, gems: 2, icon: '👑', desc: '👑 Supreme Divine Blessing: +500 Coins & 2 Celestial Gems!' }
+    ];
+    this.dailyStreak = 1;
+    this.lastClaimDate = null;
+    this.claimedDays = [];
+    this.rewardTimerInterval = null;
+
+    // Load persisted progress, profile, settings, leaderboard & daily rewards
     this.loadProgress();
     this.loadProfile();
     this.loadLeaderboard();
     this.loadSettings();
+    this.loadDailyRewards();
 
     this.bindUI();
     this.initLevelGrid();
@@ -5046,6 +5179,8 @@ class GameEngine {
     this.initMenuParticles();
     this.updateProfileUI();
     this.updateWelcomeGreeting();
+    this.updateDailyRewardUI();
+    this.startDailyRewardTimer();
     this.loadLevel(0);
 
     // Initial screens: show cinematic-intro-screen on first boot, keep others hidden
@@ -5059,10 +5194,9 @@ class GameEngine {
     const introScreen = document.getElementById('cinematic-intro-screen');
     if (introScreen) {
       introScreen.classList.remove('hidden');
-      this.playCinematicIntro();
+      this.playCinematicTitleReveal();
     } else if (welcomeScreen) {
       welcomeScreen.classList.remove('hidden');
-      sounds.playTrack('menu');
     }
 
     this.lastTime = performance.now();
@@ -5275,6 +5409,314 @@ class GameEngine {
     this.inModal = true;
   }
 
+  // ========================================================================
+  // 🎁 DAILY DIVINE REWARD SYSTEM LOGIC & PERSISTENCE
+  // ========================================================================
+  getTodayDateString() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  getYesterdayDateString() {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  loadDailyRewards() {
+    try {
+      const savedStreak = parseInt(localStorage.getItem('ganesha_daily_streak'), 10);
+      if (!isNaN(savedStreak) && savedStreak >= 1 && savedStreak <= 7) {
+        this.dailyStreak = savedStreak;
+      } else {
+        this.dailyStreak = 1;
+      }
+      this.lastClaimDate = localStorage.getItem('ganesha_last_claim_date') || null;
+      const savedClaimed = localStorage.getItem('ganesha_claimed_days');
+      if (savedClaimed) {
+        this.claimedDays = JSON.parse(savedClaimed) || [];
+      } else {
+        this.claimedDays = [];
+      }
+
+      // Check if streak was broken (missed more than yesterday)
+      const today = this.getTodayDateString();
+      const yesterday = this.getYesterdayDateString();
+      if (this.lastClaimDate && this.lastClaimDate !== today && this.lastClaimDate !== yesterday) {
+        // More than 1 day missed: reset streak back to 1 for a fresh cycle
+        this.dailyStreak = 1;
+        this.claimedDays = [];
+        this.saveDailyRewards();
+      }
+    } catch (e) {
+      console.warn("Could not load daily rewards:", e);
+    }
+  }
+
+  saveDailyRewards() {
+    try {
+      localStorage.setItem('ganesha_daily_streak', String(this.dailyStreak));
+      if (this.lastClaimDate) {
+        localStorage.setItem('ganesha_last_claim_date', this.lastClaimDate);
+      }
+      localStorage.setItem('ganesha_claimed_days', JSON.stringify(this.claimedDays));
+    } catch (e) {
+      console.warn("Could not save daily rewards:", e);
+    }
+  }
+
+  isDailyRewardAvailable() {
+    const today = this.getTodayDateString();
+    return this.lastClaimDate !== today;
+  }
+
+  getCurrentRewardDay() {
+    return Math.min(7, Math.max(1, this.dailyStreak));
+  }
+
+  updateDailyRewardUI() {
+    const isAvailable = this.isDailyRewardAvailable();
+    const currentDay = this.getCurrentRewardDay();
+
+    // 1. Update Alert Badges on Buttons
+    const menuBadge = document.getElementById('menu-reward-badge');
+    if (menuBadge) {
+      if (isAvailable) menuBadge.classList.remove('hidden');
+      else menuBadge.classList.add('hidden');
+    }
+
+    // 2. Update 7-Day Grid Cards
+    for (let day = 1; day <= 7; day++) {
+      const cardEl = document.getElementById(`reward-day-${day}`);
+      const statusEl = document.getElementById(`reward-status-${day}`);
+      if (!cardEl || !statusEl) continue;
+
+      cardEl.classList.remove('active-today', 'claimed', 'locked');
+
+      if (this.claimedDays.includes(day)) {
+        cardEl.classList.add('claimed');
+        statusEl.textContent = 'CLAIMED ✓';
+      } else if (day === currentDay && isAvailable) {
+        cardEl.classList.add('active-today');
+        statusEl.textContent = 'CLAIM NOW!';
+      } else {
+        cardEl.classList.add('locked');
+        statusEl.textContent = day < currentDay ? 'EXPIRED' : 'LOCKED';
+      }
+    }
+
+    // 3. Update Claim Button
+    const claimBtn = document.getElementById('btn-claim-daily-reward');
+    if (claimBtn) {
+      if (isAvailable) {
+        claimBtn.disabled = false;
+        claimBtn.classList.add('pulse');
+        claimBtn.innerHTML = `<span class="btn-icon">🎁</span><span class="btn-text">CLAIM DAY ${currentDay} BLESSING!</span>`;
+      } else {
+        claimBtn.disabled = true;
+        claimBtn.classList.remove('pulse');
+        claimBtn.innerHTML = `<span class="btn-icon">✓</span><span class="btn-text">TODAY'S BLESSING CLAIMED</span>`;
+      }
+    }
+
+    // 4. Update Status Banner
+    const banner = document.getElementById('reward-status-banner');
+    const timerText = document.getElementById('reward-timer-text');
+    if (banner && timerText) {
+      if (isAvailable) {
+        banner.classList.add('ready');
+        timerText.textContent = `Day ${currentDay} Blessing is Ready to Claim! 🙏`;
+      } else {
+        banner.classList.remove('ready');
+        this.updateDailyRewardTimer();
+      }
+    }
+  }
+
+  updateDailyRewardTimer() {
+    const isAvailable = this.isDailyRewardAvailable();
+    const timerText = document.getElementById('reward-timer-text');
+    if (!timerText) return;
+
+    if (isAvailable) {
+      const currentDay = this.getCurrentRewardDay();
+      timerText.textContent = `Day ${currentDay} Blessing is Ready to Claim! 🙏`;
+      return;
+    }
+
+    // Compute remaining time until next local midnight
+    const now = new Date();
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+    const diffMs = tomorrow.getTime() - now.getTime();
+
+    if (diffMs <= 0) {
+      // Midnight reached!
+      this.updateDailyRewardUI();
+      return;
+    }
+
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    const secs = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+    timerText.textContent = `Next blessing in: ${hours}h ${mins}m ${secs}s`;
+  }
+
+  startDailyRewardTimer() {
+    if (this.rewardTimerInterval) clearInterval(this.rewardTimerInterval);
+    this.rewardTimerInterval = setInterval(() => {
+      this.updateDailyRewardTimer();
+    }, 1000);
+  }
+
+  openDailyRewardModal() {
+    sounds.playClick();
+    this.updateDailyRewardUI();
+    document.getElementById('settings-modal').classList.add('hidden');
+    document.getElementById('player-profile-modal').classList.add('hidden');
+    document.getElementById('profile-dashboard-modal').classList.add('hidden');
+    document.getElementById('leaderboard-modal').classList.add('hidden');
+    document.getElementById('daily-reward-modal').classList.remove('hidden');
+    this.inModal = true;
+  }
+
+  claimDailyReward() {
+    if (!this.isDailyRewardAvailable()) return;
+
+    const currentDay = this.getCurrentRewardDay();
+    const reward = this.dailyRewardsList.find(r => r.day === currentDay) || this.dailyRewardsList[0];
+
+    // Mark today as claimed
+    const today = this.getTodayDateString();
+    this.lastClaimDate = today;
+    if (!this.claimedDays.includes(currentDay)) {
+      this.claimedDays.push(currentDay);
+    }
+
+    // Advance streak for next day (cycles after Day 7)
+    if (this.dailyStreak >= 7) {
+      this.dailyStreak = 1;
+      this.claimedDays = [];
+    } else {
+      this.dailyStreak += 1;
+    }
+
+    // Add reward to player score and coins
+    const coinsToAdd = reward.coins || 0;
+    const gemsScore = (reward.gems || 0) * 200;
+    const totalBonusScore = coinsToAdd + gemsScore;
+
+    this.coins = (this.coins || 0) + coinsToAdd;
+    this.score = (this.score || 0) + totalBonusScore;
+
+    this.saveDailyRewards();
+    this.saveProgress();
+    this.updateHUD();
+    this.updateDailyRewardUI();
+    this.recordLeaderboardScore();
+
+    // Play Divine Audio & Haptic Feedback
+    sounds.playCollect();
+    sounds.playTempleBell(1046.50);
+    sounds.playTitleChime();
+    this.triggerVibrate([40, 60, 80]);
+
+    // Show celebration popup
+    this.showRewardCelebration(reward);
+  }
+
+  showRewardCelebration(reward) {
+    const modal = document.getElementById('reward-celebration-modal');
+    if (!modal) return;
+
+    const valEl = document.getElementById('reward-burst-value');
+    if (valEl) {
+      valEl.textContent = reward.gems > 0 ? `+${reward.coins} Coins & ${reward.gems} Gem!` : `+${reward.coins} Coins!`;
+    }
+
+    const descEl = document.getElementById('reward-desc-text');
+    if (descEl) {
+      descEl.textContent = reward.desc || "Added to your Sacred Treasury!";
+    }
+
+    const chestIcon = document.getElementById('chest-icon');
+    if (chestIcon) {
+      chestIcon.textContent = reward.icon || '🎁';
+    }
+
+    modal.classList.remove('hidden');
+    this.initRewardParticles();
+  }
+
+  initRewardParticles() {
+    const canvas = document.getElementById('rewardParticlesCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = canvas.parentElement.offsetWidth || 400;
+    canvas.height = canvas.parentElement.offsetHeight || 300;
+
+    const particles = [];
+    const colors = ['#ffd700', '#ff9100', '#00e5ff', '#e040fb', '#ffffff', '#76ff03'];
+    const count = 65;
+
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 5 + 2;
+      particles.push({
+        x: canvas.width / 2,
+        y: canvas.height * 0.45,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 2,
+        radius: Math.random() * 3.5 + 1.5,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        alpha: 1,
+        decay: Math.random() * 0.02 + 0.015
+      });
+    }
+
+    let frame = 0;
+    const render = () => {
+      const modal = document.getElementById('reward-celebration-modal');
+      if (!modal || modal.classList.contains('hidden')) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let alive = false;
+
+      for (let p of particles) {
+        if (p.alpha <= 0) continue;
+        alive = true;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.12; // gravity
+        p.alpha -= p.decay;
+
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      frame++;
+      if (alive && frame < 120) {
+        requestAnimationFrame(render);
+      }
+    };
+    requestAnimationFrame(render);
+  }
+
   loadLeaderboard() {
     const defaultLeaderboard = [
       { name: "Sri Rama", avatar: "🕉️", level: 24, stars: 72, score: 35400 },
@@ -5480,43 +5922,43 @@ class GameEngine {
 
     const particles = [];
     const colors = ['#ffd700', '#ffb300', '#ff8f00', '#fff9c4', '#ffffff', '#e040fb', '#00e5ff'];
-    const count = 60;
+    const count = 75;
 
     for (let i = 0; i < count; i++) {
       particles.push({
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
-        radius: Math.random() * 2.6 + 1.2,
+        angle: Math.random() * Math.PI * 2,
+        dist: Math.random() * (Math.min(window.innerWidth, window.innerHeight) * 0.45) + 30,
+        speed: (Math.random() * 0.015 + 0.008) * (Math.random() < 0.5 ? 1 : -1),
+        radius: Math.random() * 2.8 + 1.2,
         color: colors[Math.floor(Math.random() * colors.length)],
-        vy: -(Math.random() * 0.75 + 0.25),
-        vx: (Math.random() - 0.5) * 0.5,
-        alpha: Math.random() * 0.8 + 0.2,
-        pulse: Math.random() * Math.PI * 2
+        alpha: Math.random() * 0.85 + 0.15,
+        pulse: Math.random() * Math.PI * 2,
+        vy: -(Math.random() * 0.6 + 0.2)
       });
     }
 
     const animate = () => {
       const intro = document.getElementById('cinematic-intro-screen');
-      if (intro && !intro.classList.contains('hidden') && !intro.classList.contains('intro-fading')) {
+      if (intro && !intro.classList.contains('hidden') && !intro.classList.contains('reveal-fading')) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const cx = canvas.width / 2;
+        const cy = canvas.height * 0.38;
 
         for (let p of particles) {
-          p.y += p.vy;
-          p.x += p.vx + Math.sin(p.pulse) * 0.3;
-          p.pulse += 0.025;
-
-          if (p.y < -10) {
-            p.y = canvas.height + 10;
-            p.x = Math.random() * canvas.width;
-          }
+          p.angle += p.speed;
+          p.pulse += 0.03;
+          
+          // Orbital motion around divine center with vertical drift
+          const px = cx + Math.cos(p.angle) * p.dist;
+          const py = cy + Math.sin(p.angle) * (p.dist * 0.65) + Math.sin(p.pulse) * 15;
 
           ctx.save();
-          ctx.globalAlpha = p.alpha * (0.6 + 0.4 * Math.sin(p.pulse));
+          ctx.globalAlpha = p.alpha * (0.55 + 0.45 * Math.sin(p.pulse));
           ctx.fillStyle = p.color;
           ctx.shadowColor = p.color;
-          ctx.shadowBlur = 12;
+          ctx.shadowBlur = 14;
           ctx.beginPath();
-          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.arc(px, py, p.radius, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
         }
@@ -5528,63 +5970,87 @@ class GameEngine {
     requestAnimationFrame(animate);
   }
 
-  playCinematicIntro() {
+  playCinematicTitleReveal() {
     const intro = document.getElementById('cinematic-intro-screen');
     if (!intro) return;
 
-    // Fast dynamic progression so user is never waiting or stuck
-    // Sequence Stage 1 (0.4s): Soft temple bell & warm temple light reveal
+    // 1. Initial State: Screen completely dark
+    // 2. 0.5s: Deep temple bell rings & subtle conch ambience
     this.introTimers.push(setTimeout(() => {
       if (intro && !this.introFinished) {
-        intro.classList.add('phase-reveal-temple');
-        sounds.playTempleBell(880);
+        sounds.playDeepTempleBell();
+        sounds.playConchAmbience();
       }
-    }, 400));
+    }, 500));
 
-    // Sequence Stage 2 (1.4s): Divine center glow & radiance
+    // 3. 1.2s: Small golden point of light in center + warm temple background
     this.introTimers.push(setTimeout(() => {
       if (intro && !this.introFinished) {
-        intro.classList.add('phase-divine-glow');
+        intro.classList.add('phase-temple-light');
+        intro.classList.add('phase-spark');
       }
-    }, 1400));
+    }, 1200));
 
-    // Sequence Stage 3 (2.4s): Lord Vinayaka artwork reveal with cinematic camera push-in
+    // 4 & 5. 2.0s: Light expands into powerful golden divine aura with swirling golden particles
     this.introTimers.push(setTimeout(() => {
       if (intro && !this.introFinished) {
-        intro.classList.add('phase-artwork-reveal');
+        intro.classList.add('phase-aura');
       }
-    }, 2400));
+    }, 2000));
 
-    // Sequence Stage 4 (3.5s): “🙏 VINAYAKA 🙏” title reveal + high bell chime
+    // 6 & 7. 3.0s: Subtle silhouette of Lord Vinayaka emerges with cinematic camera push-in
     this.introTimers.push(setTimeout(() => {
       if (intro && !this.introFinished) {
-        intro.classList.add('phase-title-reveal');
-        sounds.playTempleBell(1174.66);
+        intro.classList.add('phase-silhouette');
       }
-    }, 3500));
+    }, 3000));
 
-    // Sequence Stage 5 (4.6s): “THE DIVINE ADVENTURE” subtitle + musical rise
+    // 8, 9, 10. 4.4s: Dramatic golden light burst + VINAYAKA letter-by-letter metallic 3D reveal with impact
     this.introTimers.push(setTimeout(() => {
       if (intro && !this.introFinished) {
-        intro.classList.add('phase-adventure-reveal');
-        sounds.ensureMusicPlaying();
+        intro.classList.add('phase-burst');
+        intro.classList.add('phase-title');
+        sounds.playTitleImpact();
+        this.triggerVibrate(60);
+
+        // Screen shake on major title impact
+        intro.classList.add('screen-impact-shake');
+        setTimeout(() => {
+          if (intro) intro.classList.remove('screen-impact-shake');
+        }, 400);
       }
-    }, 4600));
+    }, 4400));
 
-    // Sequence Stage 6 (5.6s): “A Divine Journey Begins…” phrase
+    // 11. 5.6s: Golden light sweep shimmers across the VINAYAKA letters
     this.introTimers.push(setTimeout(() => {
       if (intro && !this.introFinished) {
-        intro.classList.add('phase-begins-reveal');
+        intro.classList.add('phase-sweep');
       }
     }, 5600));
 
-    // Sequence Stage 7 (6.8s): Smooth transition into the Welcome Screen
+    // 12 & 13. 6.4s: Reveal underneath: “THE DIVINE ADVENTURE” with gentle celestial chime
     this.introTimers.push(setTimeout(() => {
-      this.finishCinematicIntro();
-    }, 6800));
+      if (intro && !this.introFinished) {
+        intro.classList.add('phase-adventure');
+        sounds.playTitleChime();
+      }
+    }, 6400));
+
+    // 14 & 15. 7.6s: Soft particle burst + “A Divine Journey Begins…” + continuous devotional soundtrack starts
+    this.introTimers.push(setTimeout(() => {
+      if (intro && !this.introFinished) {
+        intro.classList.add('phase-begins');
+        sounds.ensureMusicPlaying();
+      }
+    }, 7600));
+
+    // 16 & 17. 10.2s: Hold complete composition for 2.6s, then smoothly transition into Welcome screen
+    this.introTimers.push(setTimeout(() => {
+      this.finishCinematicTitleReveal();
+    }, 10200));
   }
 
-  finishCinematicIntro() {
+  finishCinematicTitleReveal() {
     if (this.introFinished) return;
     this.introFinished = true;
     for (const t of this.introTimers) clearTimeout(t);
@@ -5597,35 +6063,35 @@ class GameEngine {
     const welcomeScreen = document.getElementById('welcome-screen');
 
     if (intro) {
-      intro.classList.add('intro-fading');
+      intro.classList.add('reveal-fading');
       setTimeout(() => {
         intro.classList.add('hidden');
         if (welcomeScreen) {
           welcomeScreen.classList.remove('hidden');
         }
-      }, 500);
+      }, 550);
     } else if (welcomeScreen) {
       welcomeScreen.classList.remove('hidden');
     }
   }
 
   bindUI() {
-    // Cinematic Intro Skip Button & Tap Anywhere on Intro Screen to Enter Immediately
+    // Cinematic Title Reveal Skip Button & Tap Anywhere to Enter Immediately
     const btnSkipIntro = document.getElementById('btn-skip-intro');
     if (btnSkipIntro) {
       btnSkipIntro.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.finishCinematicIntro();
+        this.finishCinematicTitleReveal();
       });
     }
 
     const introScreen = document.getElementById('cinematic-intro-screen');
     if (introScreen) {
       introScreen.addEventListener('click', () => {
-        this.finishCinematicIntro();
+        this.finishCinematicTitleReveal();
       });
       introScreen.addEventListener('touchstart', () => {
-        this.finishCinematicIntro();
+        this.finishCinematicTitleReveal();
       }, { passive: true });
     }
 

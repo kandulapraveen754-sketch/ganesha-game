@@ -16,45 +16,59 @@
   <div id="game-wrapper">
     
     <!-- ====================================================================
-         0. 🎬 CINEMATIC INTRO SEQUENCE SCREEN
+         🎬 0. GRAND CINEMATIC TITLE REVEAL SEQUENCE
          ==================================================================== -->
-    <div id="cinematic-intro-screen" class="cinematic-intro-container">
-      <div class="intro-dark-curtain" id="intro-dark-curtain"></div>
-      <div class="intro-temple-bg" id="intro-temple-bg"></div>
-      <div class="intro-mist-layer" id="intro-mist-layer"></div>
-      <canvas id="introParticlesCanvas" class="intro-particles-canvas"></canvas>
-      
-      <!-- Skip Intro Button Top-Right -->
-      <button id="btn-skip-intro" class="skip-intro-btn" type="button" aria-label="Skip Cinematic Intro">
+    <div id="cinematic-intro-screen" class="cinematic-reveal-container">
+      <div class="reveal-dark-backdrop" id="reveal-dark-backdrop"></div>
+      <div class="reveal-temple-bg" id="reveal-temple-bg"></div>
+      <div class="reveal-volumetric-rays" id="reveal-volumetric-rays"></div>
+      <div class="reveal-mist" id="reveal-mist"></div>
+      <canvas id="introParticlesCanvas" class="reveal-particles-canvas"></canvas>
+
+      <!-- Skip Button Top Right -->
+      <button id="btn-skip-intro" class="skip-reveal-btn" type="button" aria-label="Skip Title Reveal">
         <span class="skip-icon">⏭️</span>
         <span class="skip-text">SKIP INTRO</span>
       </button>
 
-      <div class="intro-cinematic-stage">
-        <!-- Center Divine Aura & Portal -->
-        <div class="intro-divine-aura" id="intro-divine-aura"></div>
-        <div class="intro-light-burst" id="intro-light-burst"></div>
+      <!-- Center Divine Stage -->
+      <div class="reveal-center-stage" id="reveal-center-stage">
+        <!-- 3. Small golden point of light -->
+        <div class="reveal-spark-point" id="reveal-spark-point"></div>
 
-        <!-- Lord Vinayaka / Ganesha Artwork Hero Showcase with Slow Zoom -->
-        <div class="intro-artwork-wrapper" id="intro-artwork-wrapper">
-          <div class="intro-artwork-frame">
-            <img src="ganesha_main_menu.jpg" alt="Lord Vinayaka Divine Artwork" class="intro-ganesha-img" id="intro-ganesha-img">
-            <div class="intro-frame-glow"></div>
-            <div class="intro-filigree tl">⚜</div>
-            <div class="intro-filigree tr">⚜</div>
-            <div class="intro-filigree bl">⚜</div>
-            <div class="intro-filigree br">⚜</div>
+        <!-- 4. Expanding Divine Aura & Rays -->
+        <div class="reveal-divine-aura" id="reveal-divine-aura"></div>
+        <div class="reveal-light-burst" id="reveal-light-burst"></div>
+
+        <!-- 6. Subtle silhouette / artwork of Vinayaka -->
+        <div class="reveal-silhouette-wrapper" id="reveal-silhouette-wrapper">
+          <img src="ganesha_main_menu.jpg" alt="Lord Vinayaka Silhouette" class="reveal-silhouette-img" id="reveal-silhouette-img">
+          <div class="silhouette-golden-shimmer"></div>
+        </div>
+
+        <!-- Typography Suite -->
+        <div class="reveal-typography-block" id="reveal-typography-block">
+          <div class="reveal-sacred-mantra" id="reveal-sacred-mantra">✨ ॐ श्री विघ्नहर्त्रे नमः ✨</div>
+          
+          <!-- 9-11. Main Title Letter-by-Letter VINAYAKA with 3D Metallic Emboss & Sweep -->
+          <h1 class="reveal-title-vinayaka" id="reveal-title-vinayaka">
+            <span class="letter-span" style="--i:0">V</span><span class="letter-span" style="--i:1">I</span><span class="letter-span" style="--i:2">N</span><span class="letter-span" style="--i:3">A</span><span class="letter-span" style="--i:4">Y</span><span class="letter-span" style="--i:5">A</span><span class="letter-span" style="--i:6">K</span><span class="letter-span" style="--i:7">A</span>
+            <div class="reveal-light-sweep" id="reveal-light-sweep"></div>
+          </h1>
+
+          <!-- 12-13. Subtitle THE DIVINE ADVENTURE -->
+          <h2 class="reveal-title-adventure" id="reveal-title-adventure">
+            THE DIVINE ADVENTURE
+          </h2>
+
+          <!-- 15. A Divine Journey Begins... -->
+          <div class="reveal-subtitle-begins" id="reveal-subtitle-begins">
+            “A Divine Journey Begins…”
           </div>
         </div>
-
-        <!-- Timed Typography Sequence -->
-        <div class="intro-text-sequence">
-          <div class="intro-ornament" id="intro-ornament">✨ ॐ गं गणपतये नमः ✨</div>
-          <h1 class="intro-title-vinayaka" id="intro-title-vinayaka">🙏 VINAYAKA 🙏</h1>
-          <h2 class="intro-title-adventure" id="intro-title-adventure">THE DIVINE ADVENTURE</h2>
-          <div class="intro-subtitle-begins" id="intro-subtitle-begins">“A Divine Journey Begins…”</div>
-        </div>
       </div>
+      
+      <div class="reveal-tap-hint">🔔 Tap anywhere to skip</div>
     </div>
 
     <!-- ====================================================================
@@ -192,9 +206,13 @@
         </div>
 
         <div class="menu-actions">
-          <button id="btn-dash-edit-profile" class="divine-btn" type="button">
+          <button id="btn-dash-daily-reward" class="divine-btn pulse" type="button">
+            <span class="btn-icon">🎁</span>
+            <span class="btn-text">DAILY DIVINE REWARD</span>
+          </button>
+          <button id="btn-dash-edit-profile" class="secondary-btn" type="button">
             <span class="btn-icon">✏️</span>
-            <span class="btn-text">EDIT NAME & SEAL</span>
+            <span class="btn-text">EDIT SEAL</span>
           </button>
           <button id="btn-close-profile-dash" class="secondary-btn" type="button">◀ BACK</button>
         </div>
@@ -243,6 +261,11 @@
           <button id="btn-menu-continue" class="menu-btn primary-start-btn" type="button">
             <span class="btn-icon">▶</span>
             <span class="btn-text">CONTINUE GAME</span>
+          </button>
+          <button id="btn-menu-daily-reward" class="menu-btn secondary-menu-btn reward-menu-btn" type="button">
+            <span class="btn-icon">🎁</span>
+            <span class="btn-text">DAILY DIVINE REWARD</span>
+            <span class="reward-alert-dot hidden" id="menu-reward-badge">●</span>
           </button>
           <button id="btn-menu-chapters" class="menu-btn secondary-menu-btn" type="button">
             <span class="btn-icon">🗺️</span>
@@ -337,6 +360,7 @@
           <span class="modak-icon">🥮</span>
           <span id="modaks-text">0</span>
         </div>
+        <button id="btn-hud-daily-reward" class="icon-btn reward-hud-btn" title="Daily Divine Reward (🎁)" aria-label="Daily Divine Reward">🎁</button>
         <button id="btn-sound" class="icon-btn sound-btn" title="Toggle Sound SFX" aria-label="Toggle Sound Effects">🔔</button>
         <button id="btn-music" class="icon-btn music-btn" title="Music: ON (Click to Mute)" aria-label="Toggle Background Music">🔊</button>
         <div id="volume-control-wrapper" class="volume-control-wrapper" title="Adjust Master Volume">
@@ -1084,6 +1108,115 @@
             <span class="btn-text">MAIN MENU</span>
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         🎁 6. DAILY DIVINE REWARD MODAL (7-DAY CALENDAR & TEMPLE TREASURES)
+         ==================================================================== -->
+    <div id="daily-reward-modal" class="modal-overlay hidden">
+      <div class="modal-card daily-reward-card">
+        <div class="card-ornament">🪔 ॐ श्री गणेशाय नमः 🪔</div>
+        <h2 class="reward-panel-title">🙏 DAILY DIVINE REWARD 🙏</h2>
+        <p class="reward-panel-subtitle">“Your blessing for today awaits! Return every calendar day to receive sacred temple treasures.”</p>
+        
+        <!-- Live Countdown / Blessing Status Banner -->
+        <div class="reward-status-banner" id="reward-status-banner">
+          <span class="status-icon">⏳</span>
+          <span id="reward-timer-text">Next blessing in: Ready to Claim!</span>
+        </div>
+
+        <!-- 7-Day Reward Grid Calendar -->
+        <div class="daily-reward-grid" id="daily-reward-grid">
+          <!-- Day 1 -->
+          <div class="daily-reward-item" data-day="1" id="reward-day-1">
+            <span class="day-badge">DAY 1</span>
+            <div class="reward-icon-box">⭐</div>
+            <div class="reward-item-title">50 Coins</div>
+            <div class="reward-item-status" id="reward-status-1">Claim</div>
+          </div>
+          <!-- Day 2 -->
+          <div class="daily-reward-item" data-day="2" id="reward-day-2">
+            <span class="day-badge">DAY 2</span>
+            <div class="reward-icon-box">⭐</div>
+            <div class="reward-item-title">100 Coins</div>
+            <div class="reward-item-status" id="reward-status-2">Locked</div>
+          </div>
+          <!-- Day 3 -->
+          <div class="daily-reward-item special-reward-item" data-day="3" id="reward-day-3">
+            <span class="day-badge">DAY 3</span>
+            <div class="reward-icon-box">🎁</div>
+            <div class="reward-item-title">Special Reward</div>
+            <div class="reward-item-sub">120 Coins + Elixir</div>
+            <div class="reward-item-status" id="reward-status-3">Locked</div>
+          </div>
+          <!-- Day 4 -->
+          <div class="daily-reward-item" data-day="4" id="reward-day-4">
+            <span class="day-badge">DAY 4</span>
+            <div class="reward-icon-box">⭐</div>
+            <div class="reward-item-title">150 Coins</div>
+            <div class="reward-item-status" id="reward-status-4">Locked</div>
+          </div>
+          <!-- Day 5 -->
+          <div class="daily-reward-item" data-day="5" id="reward-day-5">
+            <span class="day-badge">DAY 5</span>
+            <div class="reward-icon-box">💎</div>
+            <div class="reward-item-title">1 Gem</div>
+            <div class="reward-item-status" id="reward-status-5">Locked</div>
+          </div>
+          <!-- Day 6 -->
+          <div class="daily-reward-item" data-day="6" id="reward-day-6">
+            <span class="day-badge">DAY 6</span>
+            <div class="reward-icon-box">⭐</div>
+            <div class="reward-item-title">250 Coins</div>
+            <div class="reward-item-status" id="reward-status-6">Locked</div>
+          </div>
+          <!-- Day 7 Grand Divine Chest -->
+          <div class="daily-reward-item grand-chest-item" data-day="7" id="reward-day-7">
+            <span class="day-badge">DAY 7</span>
+            <div class="reward-icon-box">👑</div>
+            <div class="reward-item-title">Divine Chest</div>
+            <div class="reward-item-sub">500 Coins + 2 Gems</div>
+            <div class="reward-item-status" id="reward-status-7">Locked</div>
+          </div>
+        </div>
+
+        <!-- Claim Action Button -->
+        <div class="reward-action-area">
+          <button id="btn-claim-daily-reward" class="divine-btn pulse claim-reward-btn" type="button">
+            <span class="btn-icon">🎁</span>
+            <span class="btn-text">CLAIM TODAY'S BLESSING</span>
+          </button>
+        </div>
+
+        <div class="menu-actions">
+          <button id="btn-close-daily-reward" class="secondary-btn" type="button">◀ CLOSE</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         🎁 CELEBRATION / TREASURE CHEST OPENING POPUP MODAL
+         ==================================================================== -->
+    <div id="reward-celebration-modal" class="modal-overlay hidden">
+      <div class="modal-card celebration-card">
+        <canvas id="rewardParticlesCanvas" class="reward-particles-canvas"></canvas>
+        <div class="card-ornament">✨ ॐ श्री गणेशाय नमः ✨</div>
+        <h2 class="celebration-title">✨ Blessing Received! ✨</h2>
+        
+        <div class="treasure-chest-stage">
+          <div class="chest-rays-glow"></div>
+          <div class="chest-animation-box" id="chest-animation-box">
+            <span class="chest-icon" id="chest-icon">🪔</span>
+          </div>
+          <div class="reward-burst-value" id="reward-burst-value">+50 Coins</div>
+          <div class="reward-desc-text" id="reward-desc-text">Added to your Sacred Treasury & Score!</div>
+        </div>
+
+        <button id="btn-collect-reward-ack" class="divine-btn pulse" type="button">
+          <span class="btn-icon">🙏</span>
+          <span class="btn-text">ACCEPT BLESSING</span>
+        </button>
       </div>
     </div>
 

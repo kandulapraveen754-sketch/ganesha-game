@@ -3157,10 +3157,12 @@ body {
     gap: 6px;
     margin-bottom: 12px;
   }
+}
+
 /* ==========================================================================
-   0. 🎬 CINEMATIC INTRO SEQUENCE STYLES & ANIMATIONS
+   🎬 0. GRAND CINEMATIC TITLE REVEAL SEQUENCE STYLES
    ========================================================================== */
-.cinematic-intro-container {
+.cinematic-reveal-container {
   position: absolute;
   top: 0;
   left: 0;
@@ -3173,15 +3175,17 @@ body {
   justify-content: center;
   overflow: hidden;
   opacity: 1;
-  transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
 }
 
-.cinematic-intro-container.intro-fading {
+.cinematic-reveal-container.reveal-fading {
   opacity: 0;
   pointer-events: none;
 }
 
-.intro-dark-curtain {
+/* Dark Backdrop Fade */
+.reveal-dark-backdrop {
   position: absolute;
   top: 0;
   left: 0;
@@ -3190,311 +3194,445 @@ body {
   background: #000000;
   z-index: 10;
   opacity: 1;
-  transition: opacity 2s ease-in-out;
+  transition: opacity 1.8s ease-in-out;
   pointer-events: none;
 }
-
-.cinematic-intro-container.phase-reveal-temple .intro-dark-curtain {
+.cinematic-reveal-container.phase-temple-light .reveal-dark-backdrop {
   opacity: 0;
 }
 
-.intro-temple-bg {
+/* Ancient Temple Background */
+.reveal-temple-bg {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle at 50% 45%, #2a0e38 0%, #150320 60%, #05000a 100%);
+  background: radial-gradient(circle at 50% 45%, #2a0c36 0%, #160222 55%, #05000a 100%);
   z-index: 1;
   opacity: 0;
-  transform: scale(1.05);
-  transition: opacity 2.5s ease-out, transform 8s ease-out;
+  transform: scale(1.04);
+  transition: opacity 2s ease-out, transform 8s ease-out;
 }
-
-.cinematic-intro-container.phase-reveal-temple .intro-temple-bg {
+.cinematic-reveal-container.phase-temple-light .reveal-temple-bg {
   opacity: 1;
   transform: scale(1);
 }
 
-.intro-mist-layer {
+/* Volumetric Light Rays */
+.reveal-volumetric-rays {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(800px, 120vw);
+  height: min(800px, 120vw);
+  transform: translate(-50%, -50%) rotate(0deg);
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(255, 215, 0, 0.08) 25deg,
+    transparent 50deg,
+    rgba(255, 179, 0, 0.06) 80deg,
+    transparent 110deg,
+    rgba(255, 215, 0, 0.08) 150deg,
+    transparent 180deg,
+    rgba(255, 179, 0, 0.06) 220deg,
+    transparent 260deg,
+    rgba(255, 215, 0, 0.08) 310deg,
+    transparent 360deg
+  );
+  filter: blur(20px);
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 2s ease;
+  animation: rotateLightRays 40s linear infinite;
+  pointer-events: none;
+}
+.cinematic-reveal-container.phase-aura .reveal-volumetric-rays {
+  opacity: 1;
+}
+
+@keyframes rotateLightRays {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Gentle Smoke / Mist Layer */
+.reveal-mist {
   position: absolute;
   top: 0;
   left: 0;
   width: 200%;
   height: 100%;
-  background: radial-gradient(ellipse at center, rgba(255, 179, 0, 0.08) 0%, rgba(142, 36, 170, 0.05) 50%, transparent 80%);
-  filter: blur(25px);
-  z-index: 2;
+  background: radial-gradient(ellipse at center, rgba(255, 183, 77, 0.09) 0%, rgba(171, 71, 188, 0.05) 50%, transparent 80%);
+  filter: blur(30px);
+  z-index: 3;
   opacity: 0;
   transition: opacity 2s ease-in;
-  animation: introMistDrift 14s linear infinite alternate;
+  animation: revealMistDrift 16s ease-in-out infinite alternate;
   pointer-events: none;
 }
-
-.cinematic-intro-container.phase-reveal-temple .intro-mist-layer {
+.cinematic-reveal-container.phase-temple-light .reveal-mist {
   opacity: 1;
 }
 
-@keyframes introMistDrift {
+@keyframes revealMistDrift {
   0% { transform: translateX(-15%); }
   100% { transform: translateX(5%); }
 }
 
-.intro-particles-canvas {
+/* Swirling / Floating Golden Particles Canvas */
+.reveal-particles-canvas {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 3;
+  z-index: 4;
   pointer-events: none;
 }
 
-.skip-intro-btn {
+/* Top Right Skip Button */
+.skip-reveal-btn {
   position: absolute;
   top: 16px;
   right: 18px;
   z-index: 100;
-  background: rgba(20, 5, 30, 0.75);
-  border: 1.5px solid rgba(255, 215, 0, 0.6);
+  background: rgba(25, 8, 38, 0.85);
+  border: 1.5px solid rgba(255, 215, 0, 0.65);
   border-radius: 20px;
-  padding: 6px 14px;
+  padding: 6px 15px;
   color: #ffd700;
   font-family: var(--font-royal);
-  font-size: 11.5px;
-  letter-spacing: 1px;
+  font-size: 11px;
+  letter-spacing: 1.5px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6), 0 0 10px rgba(255, 215, 0, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7), 0 0 12px rgba(255, 215, 0, 0.35);
   transition: all 0.25s ease;
   backdrop-filter: blur(8px);
 }
-
-.skip-intro-btn:hover {
+.skip-reveal-btn:hover {
   background: rgba(255, 215, 0, 0.25);
   border-color: #ffd700;
   transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.5);
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.55);
 }
 
-.intro-cinematic-stage {
+/* Center Divine Stage */
+.reveal-center-stage {
   position: relative;
-  z-index: 4;
+  z-index: 5;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  max-width: 680px;
+  max-width: 720px;
   width: 92%;
   margin: auto;
   padding: 10px;
 }
 
-/* Center Divine Aura & Rays */
-.intro-divine-aura {
+/* 3. Small golden spark point of light */
+.reveal-spark-point {
   position: absolute;
-  top: 38%;
+  top: 36%;
   left: 50%;
-  transform: translate(-50%, -50%) scale(0.3);
-  width: min(500px, 85vw);
-  height: min(500px, 85vw);
+  transform: translate(-50%, -50%) scale(0);
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 215, 0, 0.45) 0%, rgba(255, 111, 0, 0.2) 45%, transparent 72%);
-  filter: blur(25px);
-  z-index: -1;
+  background: #ffffff;
+  box-shadow: 0 0 15px 6px #ffd700, 0 0 35px 12px #ff9100;
   opacity: 0;
-  transition: opacity 2s ease-out, transform 2.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  z-index: 6;
+  transition: transform 1.2s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.8s ease;
 }
-
-.cinematic-intro-container.phase-divine-glow .intro-divine-aura {
+.cinematic-reveal-container.phase-spark .reveal-spark-point {
   opacity: 1;
-  transform: translate(-50%, -50%) scale(1.15);
-  animation: auraPulseSlow 3s ease-in-out infinite alternate;
+  transform: translate(-50%, -50%) scale(1);
+  animation: sparkPulse 1.2s ease-in-out infinite alternate;
+}
+@keyframes sparkPulse {
+  0% { transform: translate(-50%, -50%) scale(0.9); box-shadow: 0 0 12px 4px #ffd700; }
+  100% { transform: translate(-50%, -50%) scale(1.3); box-shadow: 0 0 25px 10px #ffffff, 0 0 45px 18px #ffb300; }
 }
 
-@keyframes auraPulseSlow {
-  0% { transform: translate(-50%, -50%) scale(1.05); filter: blur(25px); }
-  100% { transform: translate(-50%, -50%) scale(1.22); filter: blur(35px); }
-}
-
-.intro-light-burst {
+/* 4. Expanding Divine Aura */
+.reveal-divine-aura {
   position: absolute;
-  top: 38%;
+  top: 36%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  width: min(600px, 95vw);
-  height: min(600px, 95vw);
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, rgba(255, 215, 0, 0.15) 30%, transparent 65%);
-  filter: blur(15px);
-  z-index: -2;
+  transform: translate(-50%, -50%) scale(0.2);
+  width: min(520px, 86vw);
+  height: min(520px, 86vw);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.5) 0%, rgba(255, 128, 0, 0.22) 42%, transparent 72%);
+  filter: blur(24px);
+  z-index: 1;
   opacity: 0;
-  transition: opacity 1.8s ease-in;
+  transition: opacity 1.8s ease-out, transform 2.4s cubic-bezier(0.18, 0.89, 0.32, 1.2);
 }
-
-.cinematic-intro-container.phase-divine-glow .intro-light-burst {
-  opacity: 0.85;
-}
-
-/* Artwork Showcase with Slow Cinematic Zoom */
-.intro-artwork-wrapper {
-  position: relative;
-  margin: 0 0 16px;
-  border-radius: 20px;
-  padding: 8px;
-  background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 111, 0, 0.2));
-  border: 2.5px solid rgba(255, 215, 0, 0.75);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85), 0 0 45px rgba(255, 215, 0, 0.6);
-  opacity: 0;
-  transform: scale(0.90) translateY(15px);
-  transition: opacity 2s ease-out, transform 7s cubic-bezier(0.1, 0, 0.2, 1);
-}
-
-.cinematic-intro-container.phase-artwork-reveal .intro-artwork-wrapper {
+.cinematic-reveal-container.phase-aura .reveal-divine-aura {
   opacity: 1;
-  transform: scale(1.06) translateY(0);
+  transform: translate(-50%, -50%) scale(1.18);
+  animation: auraBreathe 3.5s ease-in-out infinite alternate;
+}
+@keyframes auraBreathe {
+  0% { transform: translate(-50%, -50%) scale(1.08); filter: blur(22px); }
+  100% { transform: translate(-50%, -50%) scale(1.26); filter: blur(32px); }
 }
 
-.intro-artwork-frame {
+/* 8. Dramatic Light Burst */
+.reveal-light-burst {
+  position: absolute;
+  top: 36%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.4);
+  width: min(650px, 98vw);
+  height: min(650px, 98vw);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.85) 0%, rgba(255, 215, 0, 0.4) 30%, transparent 68%);
+  filter: blur(14px);
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.4s ease-out, transform 0.6s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+.cinematic-reveal-container.phase-burst .reveal-light-burst {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.2);
+}
+
+/* 6-7. Vinayaka Silhouette with Camera Push-In */
+.reveal-silhouette-wrapper {
   position: relative;
-  border-radius: 14px;
+  margin: 0 0 14px;
+  border-radius: 18px;
+  padding: 6px;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.35), rgba(255, 111, 0, 0.2));
+  border: 2px solid rgba(255, 215, 0, 0.7);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9), 0 0 40px rgba(255, 215, 0, 0.55);
+  opacity: 0;
+  transform: scale(0.88) translateY(12px);
+  transition: opacity 1.8s ease-out, transform 6.5s cubic-bezier(0.1, 0, 0.2, 1);
   overflow: hidden;
 }
+.cinematic-reveal-container.phase-silhouette .reveal-silhouette-wrapper {
+  opacity: 1;
+  transform: scale(1.05) translateY(0);
+}
 
-.intro-ganesha-img {
+.reveal-silhouette-img {
   display: block;
-  max-width: clamp(190px, 34vw, 260px);
-  max-height: clamp(140px, 26vh, 210px);
+  max-width: clamp(180px, 32vw, 250px);
+  max-height: clamp(130px, 24vh, 200px);
   width: auto;
   height: auto;
   border-radius: 12px;
   object-fit: cover;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.9);
+  filter: brightness(0.92) contrast(1.1);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.85);
 }
 
-.intro-frame-glow {
+.silhouette-golden-shimmer {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  box-shadow: inset 0 0 25px rgba(255, 215, 0, 0.4);
+  box-shadow: inset 0 0 30px rgba(255, 215, 0, 0.45);
   pointer-events: none;
 }
 
-.intro-filigree {
-  position: absolute;
-  font-size: 18px;
-  color: #ffd700;
-  text-shadow: 0 0 10px #ffd700;
-}
-.intro-filigree.tl { top: 4px; left: 6px; }
-.intro-filigree.tr { top: 4px; right: 6px; }
-.intro-filigree.bl { bottom: 4px; left: 6px; }
-.intro-filigree.br { bottom: 4px; right: 6px; }
-
-/* Cinematic Typography Sequence */
-.intro-text-sequence {
+/* Typography Suite */
+.reveal-typography-block {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  position: relative;
 }
 
-.intro-ornament {
+.reveal-sacred-mantra {
   font-family: var(--font-royal);
-  font-size: clamp(13px, 2.4vw, 17px);
+  font-size: clamp(12px, 2.3vw, 16px);
   color: #ffd700;
   letter-spacing: 2px;
   text-shadow: 0 0 12px rgba(255, 215, 0, 0.9);
   opacity: 0;
   transform: translateY(8px);
-  transition: opacity 1.4s ease-out, transform 1.4s ease-out;
+  transition: opacity 1.2s ease-out, transform 1.2s ease-out;
 }
-
-.cinematic-intro-container.phase-title-reveal .intro-ornament {
+.cinematic-reveal-container.phase-title .reveal-sacred-mantra {
   opacity: 1;
   transform: translateY(0);
 }
 
-.intro-title-vinayaka {
-  font-family: var(--font-royal);
-  font-size: clamp(26px, 6vw, 44px);
+/* 9-11. VINAYAKA Letter-by-Letter 3D Metallic Gold with Emboss & Shimmer */
+.reveal-title-vinayaka {
+  font-family: 'Cinzel Decorative', serif;
+  font-weight: 700;
+  font-size: clamp(28px, 6.8vw, 48px);
+  letter-spacing: clamp(3px, 1.2vw, 8px);
+  margin: 4px 0 6px;
+  position: relative;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  /* Metallic 3D Emboss & Depth */
   color: #ffd700;
-  margin: 2px 0 4px;
-  letter-spacing: 3px;
-  text-shadow: 0 0 25px rgba(255, 215, 0, 0.95), 0 0 50px rgba(255, 111, 0, 0.7), 0 2px 8px #000;
-  opacity: 0;
-  transform: scale(0.92) translateY(12px);
-  transition: opacity 1.6s ease-out, transform 1.6s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-}
-
-.cinematic-intro-container.phase-title-reveal .intro-title-vinayaka {
-  opacity: 1;
-  transform: scale(1) translateY(0);
-}
-
-.intro-title-adventure {
-  font-family: var(--font-devotional);
-  font-size: clamp(16px, 3.8vw, 26px);
-  letter-spacing: 2px;
-  background: linear-gradient(180deg, #ffffff 0%, #fff9c4 40%, #ffd700 80%, #ff8f00 100%);
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #fff8e1 22%,
+    #ffe082 45%,
+    #ffd700 70%,
+    #d4af37 88%,
+    #aa7c11 100%
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
-  margin: 0 0 8px;
-  opacity: 0;
-  transform: translateY(10px);
-  transition: opacity 1.5s ease-out, transform 1.5s ease-out;
-}
-
-.cinematic-intro-container.phase-adventure-reveal .intro-title-adventure {
+  text-shadow:
+    0 1px 0 #ffe082,
+    0 2px 0 #d4af37,
+    0 3px 0 #aa7c11,
+    0 5px 8px rgba(0, 0, 0, 0.95),
+    0 0 30px rgba(255, 215, 0, 0.85),
+    0 0 60px rgba(255, 143, 0, 0.6);
   opacity: 1;
-  transform: translateY(0);
 }
 
-.intro-subtitle-begins {
-  font-family: 'Philosopher', serif;
-  font-style: italic;
-  font-size: clamp(13px, 2.3vw, 17px);
-  color: #ffe082;
-  letter-spacing: 1px;
-  text-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+.reveal-title-vinayaka .letter-span {
+  display: inline-block;
   opacity: 0;
-  transform: translateY(6px);
+  transform: translateY(18px) scale(0.85);
+  filter: blur(4px);
+  transition: opacity 0.4s ease-out, transform 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28), filter 0.4s ease-out;
+}
+
+.cinematic-reveal-container.phase-title .reveal-title-vinayaka .letter-span {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
+  transition-delay: calc(var(--i) * 0.07s);
+}
+
+/* 11. Golden Light Sweep across VINAYAKA */
+.reveal-light-sweep {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.7) 50%,
+    transparent 100%
+  );
+  transform: skewX(-25deg);
+  pointer-events: none;
+  opacity: 0;
+}
+.cinematic-reveal-container.phase-sweep .reveal-light-sweep {
+  opacity: 1;
+  animation: titleLightSweep 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes titleLightSweep {
+  0% { left: -80%; }
+  100% { left: 160%; }
+}
+
+/* 12-13. Subtitle THE DIVINE ADVENTURE */
+.reveal-title-adventure {
+  font-family: var(--font-devotional);
+  font-size: clamp(15px, 3.6vw, 24px);
+  letter-spacing: clamp(2px, 0.8vw, 4px);
+  color: #fff9c4;
+  background: linear-gradient(180deg, #ffffff 0%, #fff59d 40%, #ffd54f 80%, #ff8f00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9), 0 0 20px rgba(255, 215, 0, 0.6);
+  margin: 2px 0 8px;
+  opacity: 0;
+  transform: translateY(12px);
   transition: opacity 1.4s ease-out, transform 1.4s ease-out;
 }
-
-.cinematic-intro-container.phase-begins-reveal .intro-subtitle-begins {
+.cinematic-reveal-container.phase-adventure .reveal-title-adventure {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* 15. A Divine Journey Begins... */
+.reveal-subtitle-begins {
+  font-family: 'Philosopher', serif;
+  font-style: italic;
+  font-size: clamp(13px, 2.2vw, 17px);
+  color: #ffe082;
+  letter-spacing: 1.2px;
+  text-shadow: 0 0 12px rgba(255, 215, 0, 0.65);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 1.3s ease-out, transform 1.3s ease-out;
+}
+.cinematic-reveal-container.phase-begins .reveal-subtitle-begins {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Bottom Tap to Skip Hint */
+.reveal-tap-hint {
+  position: absolute;
+  bottom: 16px;
+  font-size: 12px;
+  color: rgba(255, 215, 0, 0.7);
+  letter-spacing: 1px;
+  font-family: var(--font-royal);
+  animation: hintBreathe 2s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes hintBreathe {
+  0% { opacity: 0.4; }
+  100% { opacity: 0.9; }
+}
+
+/* Screen Shake at Title Impact */
+.screen-impact-shake {
+  animation: titleScreenShake 0.35s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+@keyframes titleScreenShake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, -1px, 0); }
+  30%, 50%, 70% { transform: translate3d(-2px, 2px, 0); }
+  40%, 60% { transform: translate3d(2px, 1px, 0); }
 }
 
 @media (max-height: 540px) {
-  .intro-cinematic-stage {
-    padding: 4px;
+  .reveal-center-stage {
+    padding: 2px;
   }
-  .intro-artwork-wrapper {
-    margin: 0 0 6px;
-    padding: 4px;
+  .reveal-silhouette-wrapper {
+    margin: 0 0 4px;
+    padding: 3px;
   }
-  .intro-ganesha-img {
-    max-height: 95px;
+  .reveal-silhouette-img {
+    max-height: 85px;
   }
-  .intro-title-vinayaka {
-    font-size: 20px;
+  .reveal-title-vinayaka {
+    font-size: 22px;
     margin: 1px 0;
   }
-  .intro-title-adventure {
+  .reveal-title-adventure {
     font-size: 13px;
     margin-bottom: 2px;
   }
-  .intro-subtitle-begins {
+  .reveal-subtitle-begins {
     font-size: 11px;
   }
-  .skip-intro-btn {
+  .skip-reveal-btn {
     top: 8px;
     right: 10px;
     padding: 4px 10px;
@@ -3502,5 +3640,330 @@ body {
   }
 }
 
+/* ==========================================================================
+   🎁 6. DAILY DIVINE REWARD SYSTEM STYLES & ANIMATIONS
+   ========================================================================== */
+.reward-menu-btn {
+  position: relative;
+  border-color: rgba(255, 215, 0, 0.8) !important;
+  background: linear-gradient(135deg, rgba(255, 179, 0, 0.18) 0%, rgba(142, 36, 170, 0.22) 100%) !important;
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.4) !important;
+}
 
+.reward-alert-dot {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  width: 10px;
+  height: 10px;
+  background: #ff1744;
+  border: 1.5px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #ff1744;
+  animation: rewardDotPulse 1.2s infinite ease-in-out;
+}
 
+@keyframes rewardDotPulse {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.35); opacity: 1; box-shadow: 0 0 14px #ff1744; }
+  100% { transform: scale(0.9); opacity: 0.8; }
+}
+
+.reward-hud-btn {
+  border-color: #ffd700 !important;
+  background: rgba(255, 215, 0, 0.2) !important;
+  animation: hudRewardGlow 2.5s infinite alternate;
+}
+
+@keyframes hudRewardGlow {
+  0% { box-shadow: 0 0 6px rgba(255, 215, 0, 0.3); }
+  100% { box-shadow: 0 0 16px rgba(255, 215, 0, 0.8); }
+}
+
+/* Daily Reward Modal Card */
+.daily-reward-card {
+  width: min(94vw, 560px) !important;
+  max-width: 560px;
+  background: radial-gradient(circle at 50% 10%, #2b0c36 0%, #170422 60%, #0a0110 100%) !important;
+  border: 2px solid var(--primary-gold) !important;
+  box-shadow: 0 0 35px rgba(255, 179, 0, 0.5), inset 0 0 25px rgba(255, 215, 0, 0.12) !important;
+  padding: 16px 14px;
+}
+
+.reward-panel-title {
+  font-family: var(--font-royal);
+  font-size: clamp(18px, 4.2vw, 24px);
+  color: var(--primary-gold);
+  margin: 4px 0 2px;
+  letter-spacing: 2px;
+  text-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
+}
+
+.reward-panel-subtitle {
+  font-family: 'Philosopher', serif;
+  font-size: clamp(12px, 2.5vw, 14px);
+  color: #ffe082;
+  margin: 0 0 12px;
+  font-style: italic;
+}
+
+/* Status / Timer Banner */
+.reward-status-banner {
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  border-radius: 20px;
+  padding: 6px 14px;
+  margin: 0 auto 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-royal);
+  font-size: clamp(11px, 2.4vw, 13px);
+  color: #fff9c4;
+  box-shadow: inset 0 0 10px rgba(255, 215, 0, 0.15);
+}
+
+.reward-status-banner.ready {
+  border-color: #00e676;
+  color: #b9f6ca;
+  background: rgba(0, 100, 0, 0.35);
+  box-shadow: 0 0 15px rgba(0, 230, 118, 0.4);
+}
+
+/* 7-Day Grid */
+.daily-reward-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.daily-reward-item {
+  background: rgba(30, 10, 42, 0.85);
+  border: 1.5px solid rgba(255, 215, 0, 0.3);
+  border-radius: 12px;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+.daily-reward-item .day-badge {
+  font-family: var(--font-royal);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: #ffd54f;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 2px 6px;
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+
+.daily-reward-item .reward-icon-box {
+  font-size: 24px;
+  margin: 2px 0;
+  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.5));
+  transition: transform 0.25s ease;
+}
+
+.daily-reward-item .reward-item-title {
+  font-family: var(--font-devotional);
+  font-size: 11px;
+  color: #ffffff;
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+
+.daily-reward-item .reward-item-sub {
+  font-size: 9px;
+  color: #ffe082;
+  margin-bottom: 2px;
+}
+
+.daily-reward-item .reward-item-status {
+  font-size: 9.5px;
+  font-family: var(--font-royal);
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #9e9e9e;
+}
+
+/* Card States */
+.daily-reward-item.active-today {
+  border-color: #ffd700;
+  background: linear-gradient(180deg, rgba(255, 215, 0, 0.25) 0%, rgba(142, 36, 170, 0.35) 100%);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.7), inset 0 0 12px rgba(255, 215, 0, 0.3);
+  transform: scale(1.04);
+  animation: activeCardPulse 2s infinite ease-in-out;
+}
+
+.daily-reward-item.active-today .reward-item-status {
+  background: #ffb300;
+  color: #000000;
+  font-weight: bold;
+}
+
+.daily-reward-item.active-today .reward-icon-box {
+  transform: scale(1.15);
+  animation: iconWiggle 2s infinite ease-in-out;
+}
+
+@keyframes activeCardPulse {
+  0% { box-shadow: 0 0 12px rgba(255, 215, 0, 0.5); }
+  50% { box-shadow: 0 0 24px rgba(255, 215, 0, 0.9), 0 0 35px rgba(255, 160, 0, 0.6); }
+  100% { box-shadow: 0 0 12px rgba(255, 215, 0, 0.5); }
+}
+
+@keyframes iconWiggle {
+  0%, 100% { transform: scale(1.15) rotate(0deg); }
+  25% { transform: scale(1.22) rotate(-6deg); }
+  75% { transform: scale(1.22) rotate(6deg); }
+}
+
+.daily-reward-item.claimed {
+  opacity: 0.75;
+  border-color: rgba(76, 175, 80, 0.6);
+  background: rgba(20, 40, 20, 0.6);
+}
+
+.daily-reward-item.claimed .reward-item-status {
+  background: rgba(46, 125, 50, 0.8);
+  color: #c8e6c9;
+  font-weight: bold;
+}
+
+.daily-reward-item.special-reward-item {
+  border-color: #ba68c8;
+  background: linear-gradient(180deg, rgba(142, 36, 170, 0.25) 0%, rgba(20, 5, 30, 0.8) 100%);
+}
+
+.daily-reward-item.grand-chest-item {
+  grid-column: span 2;
+  border-color: #ffd700;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.25) 0%, rgba(216, 27, 96, 0.3) 100%);
+}
+
+.daily-reward-item.grand-chest-item .reward-icon-box {
+  font-size: 28px;
+}
+
+/* Action Area */
+.reward-action-area {
+  margin-bottom: 8px;
+}
+
+.claim-reward-btn {
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 14px;
+}
+
+/* Celebration Popup Modal */
+.celebration-card {
+  width: min(90vw, 440px) !important;
+  background: radial-gradient(circle, #380d47 0%, #150222 70%, #05000a 100%) !important;
+  border: 2.5px solid #ffd700 !important;
+  box-shadow: 0 0 50px rgba(255, 215, 0, 0.8) !important;
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+}
+
+.reward-particles-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.celebration-title {
+  font-family: var(--font-royal);
+  color: #ffd700;
+  font-size: clamp(20px, 4.5vw, 26px);
+  margin: 4px 0 10px;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.9);
+  position: relative;
+  z-index: 2;
+}
+
+.treasure-chest-stage {
+  position: relative;
+  z-index: 2;
+  padding: 10px 0 14px;
+}
+
+.chest-rays-glow {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.4) 0%, rgba(255, 111, 0, 0.2) 40%, transparent 70%);
+  filter: blur(15px);
+  animation: chestRaySpin 8s linear infinite;
+}
+
+@keyframes chestRaySpin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.chest-animation-box {
+  font-size: 54px;
+  margin: 4px 0;
+  filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.9));
+  animation: chestPop 0.8s cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
+}
+
+@keyframes chestPop {
+  0% { transform: scale(0.3) rotate(-15deg); opacity: 0; }
+  60% { transform: scale(1.25) rotate(8deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+.reward-burst-value {
+  font-family: var(--font-devotional);
+  font-size: clamp(22px, 5vw, 30px);
+  color: #ffffff;
+  background: linear-gradient(180deg, #ffffff 0%, #fff59d 40%, #ffd700 80%, #ff8f00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: bold;
+  margin: 6px 0 2px;
+}
+
+.reward-desc-text {
+  font-family: 'Philosopher', serif;
+  font-size: 13px;
+  color: #ffe082;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 480px) {
+  .daily-reward-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .daily-reward-item.grand-chest-item {
+    grid-column: span 3;
+  }
+  .daily-reward-item {
+    padding: 6px 3px;
+  }
+  .daily-reward-item .reward-icon-box {
+    font-size: 20px;
+  }
+  .daily-reward-item .reward-item-title {
+    font-size: 10px;
+  }
+}
