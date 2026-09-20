@@ -1,4 +1,4 @@
-<source src="Ganesha.mp3" type="audio/mpeg"><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -11,17 +11,200 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <audio id="bgMusic" loop>
-  <source src="Divine%20Race%20(1).mp3" type="audio/mpeg">
-  </audio>
 
   <!-- Main Game Container: Centers and scales the game responsively -->
   <div id="game-wrapper">
     
     <!-- ====================================================================
-         CINEMATIC MAIN MENU OVERLAY (FIRST PAGE)
+         0. 🎬 CINEMATIC INTRO SEQUENCE SCREEN
          ==================================================================== -->
-    <div id="main-menu-overlay" class="main-menu-container">
+    <div id="cinematic-intro-screen" class="cinematic-intro-container">
+      <div class="intro-dark-curtain" id="intro-dark-curtain"></div>
+      <div class="intro-temple-bg" id="intro-temple-bg"></div>
+      <div class="intro-mist-layer" id="intro-mist-layer"></div>
+      <canvas id="introParticlesCanvas" class="intro-particles-canvas"></canvas>
+      
+      <!-- Skip Intro Button Top-Right -->
+      <button id="btn-skip-intro" class="skip-intro-btn" type="button" aria-label="Skip Cinematic Intro">
+        <span class="skip-icon">⏭️</span>
+        <span class="skip-text">SKIP INTRO</span>
+      </button>
+
+      <div class="intro-cinematic-stage">
+        <!-- Center Divine Aura & Portal -->
+        <div class="intro-divine-aura" id="intro-divine-aura"></div>
+        <div class="intro-light-burst" id="intro-light-burst"></div>
+
+        <!-- Lord Vinayaka / Ganesha Artwork Hero Showcase with Slow Zoom -->
+        <div class="intro-artwork-wrapper" id="intro-artwork-wrapper">
+          <div class="intro-artwork-frame">
+            <img src="ganesha_main_menu.jpg" alt="Lord Vinayaka Divine Artwork" class="intro-ganesha-img" id="intro-ganesha-img">
+            <div class="intro-frame-glow"></div>
+            <div class="intro-filigree tl">⚜</div>
+            <div class="intro-filigree tr">⚜</div>
+            <div class="intro-filigree bl">⚜</div>
+            <div class="intro-filigree br">⚜</div>
+          </div>
+        </div>
+
+        <!-- Timed Typography Sequence -->
+        <div class="intro-text-sequence">
+          <div class="intro-ornament" id="intro-ornament">✨ ॐ गं गणपतये नमः ✨</div>
+          <h1 class="intro-title-vinayaka" id="intro-title-vinayaka">🙏 VINAYAKA 🙏</h1>
+          <h2 class="intro-title-adventure" id="intro-title-adventure">THE DIVINE ADVENTURE</h2>
+          <div class="intro-subtitle-begins" id="intro-subtitle-begins">“A Divine Journey Begins…”</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         1. 🕉️ WELCOME SCREEN (INITIAL LANDING SCREEN)
+         ==================================================================== -->
+    <div id="welcome-screen" class="welcome-screen-container hidden">
+      <div class="welcome-bg-glow"></div>
+      <canvas id="welcomeParticlesCanvas" class="welcome-particles-canvas"></canvas>
+
+      <div class="welcome-content">
+        <div class="welcome-ornament">✨ ॐ गं गणपतये नमः ✨</div>
+        <h1 class="welcome-title">LORD GANESHA: VINAYAKA<br><span class="welcome-title-sub">THE DIVINE ADVENTURE</span></h1>
+        <p class="welcome-subtitle">Three Chapters • Twenty-Four Sacred Trials • One Supreme Journey</p>
+
+        <div id="welcome-greeting" class="welcome-greeting-pill hidden">
+          <span class="greeting-icon">🙏</span>
+          <span id="welcome-greeting-text">Welcome back, Devotee!</span>
+        </div>
+
+        <div class="welcome-hero-card">
+          <div class="welcome-aura-ring"></div>
+          <img src="ganesha_main_menu.jpg" alt="Lord Ganesha Divine Blessing" class="welcome-hero-img" id="welcome-hero-img">
+          <div class="welcome-filigree tl">⚜</div>
+          <div class="welcome-filigree tr">⚜</div>
+          <div class="welcome-filigree bl">⚜</div>
+          <div class="welcome-filigree br">⚜</div>
+        </div>
+
+        <div class="welcome-sanskrit-quote">
+          “वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ। निर्विघ्नं कुरु मे देव सर्वकार्येषु सर्वदा॥”
+        </div>
+
+        <button id="btn-welcome-play" class="divine-btn pulse welcome-play-btn" type="button">
+          <span class="btn-icon">▶</span>
+          <span class="btn-text">START ADVENTURE</span>
+        </button>
+
+        <div class="welcome-tap-hint">🔔 Tap anywhere to begin with sacred temple music</div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         2. 👤 PLAYER LOGIN / NAME REGISTRATION MODAL
+         ==================================================================== -->
+    <div id="player-profile-modal" class="modal-overlay hidden">
+      <div class="modal-card profile-card">
+        <div class="card-ornament">🕉️ ॐ श्री गणेशाय नमः 🕉️</div>
+        <h2 class="profile-title" id="profile-modal-title">ENTER YOUR SACRED NAME</h2>
+        <p class="profile-subtitle" id="profile-modal-subtitle">Enter your name to embark on the sacred adventure and record your honors on the leaderboard.</p>
+
+        <div class="profile-form-group">
+          <label for="player-name-input" class="profile-label">Your Sacred Name:</label>
+          <input type="text" id="player-name-input" class="divine-input" maxlength="16" placeholder="Enter Your Name..." autocomplete="off" spellcheck="false">
+        </div>
+
+        <div class="avatar-select-group">
+          <span class="avatar-select-label">Choose Your Divine Seal:</span>
+          <div class="avatar-picker" id="avatar-picker">
+            <button type="button" class="avatar-chip active" data-avatar="🐘" title="Sacred Ganesha Seal">🐘</button>
+            <button type="button" class="avatar-chip" data-avatar="🌺" title="Lotus Devotion Seal">🌺</button>
+            <button type="button" class="avatar-chip" data-avatar="🕉️" title="Om Celestial Seal">🕉️</button>
+            <button type="button" class="avatar-chip" data-avatar="🪔" title="Diya Light Seal">🪔</button>
+            <button type="button" class="avatar-chip" data-avatar="🔱" title="Trishula Power Seal">🔱</button>
+            <button type="button" class="avatar-chip" data-avatar="🐚" title="Shankha Purity Seal">🐚</button>
+          </div>
+        </div>
+
+        <div id="profile-hint" class="profile-hint"></div>
+
+        <div class="menu-actions">
+          <button id="btn-profile-continue" class="divine-btn pulse" type="button">
+            <span class="btn-icon">✓</span>
+            <span class="btn-text">SAVE & ENTER GAME</span>
+          </button>
+          <button id="btn-profile-cancel" class="secondary-btn hidden" type="button">✕ CANCEL</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         2B. 👤 FULL PLAYER PROFILE DASHBOARD MODAL
+         ==================================================================== -->
+    <div id="profile-dashboard-modal" class="modal-overlay hidden">
+      <div class="modal-card profile-dashboard-card">
+        <div class="card-ornament">⚜ ॐ श्री गणेशाय नमः ⚜</div>
+        <h2 class="menu-modal-title">DEVOTEE PROFILE</h2>
+        <p class="modal-subtitle-text">Your spiritual progress across the 24 sacred trials</p>
+
+        <div class="profile-hero-badge">
+          <div class="profile-avatar-circle" id="dash-avatar-circle">🐘</div>
+          <div class="profile-hero-info">
+            <h3 class="profile-hero-name" id="dash-player-name">Devotee</h3>
+            <span class="profile-divine-title" id="dash-divine-title">🌟 Sacred Seeker</span>
+          </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="profile-progress-section">
+          <div class="progress-labels">
+            <span>Adventure Progress</span>
+            <strong id="dash-progress-pct">0%</strong>
+          </div>
+          <div class="progress-bar-outer">
+            <div id="dash-progress-bar" class="progress-bar-fill" style="width: 4%;"></div>
+          </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="profile-stats-grid">
+          <div class="profile-stat-box">
+            <span class="pstat-icon">🥮</span>
+            <span class="pstat-label">Total Score</span>
+            <strong class="pstat-val" id="dash-total-score">0</strong>
+          </div>
+          <div class="profile-stat-box">
+            <span class="pstat-icon">🗺️</span>
+            <span class="pstat-label">Levels Completed</span>
+            <strong class="pstat-val" id="dash-levels-completed">0 / 24</strong>
+          </div>
+          <div class="profile-stat-box">
+            <span class="pstat-icon">⭐</span>
+            <span class="pstat-label">Stars Earned</span>
+            <strong class="pstat-val" id="dash-stars-earned">0 / 72</strong>
+          </div>
+          <div class="profile-stat-box">
+            <span class="pstat-icon">🏆</span>
+            <span class="pstat-label">Leaderboard Rank</span>
+            <strong class="pstat-val" id="dash-leaderboard-rank">#1</strong>
+          </div>
+          <div class="profile-stat-box full-width">
+            <span class="pstat-icon">🏛️</span>
+            <span class="pstat-label">Highest Chapter Reached</span>
+            <strong class="pstat-val highlight" id="dash-highest-chapter">Chapter 1: The Sacred Temple</strong>
+          </div>
+        </div>
+
+        <div class="menu-actions">
+          <button id="btn-dash-edit-profile" class="divine-btn" type="button">
+            <span class="btn-icon">✏️</span>
+            <span class="btn-text">EDIT NAME & SEAL</span>
+          </button>
+          <button id="btn-close-profile-dash" class="secondary-btn" type="button">◀ BACK</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         3. 🎮 MAIN MENU OVERLAY
+         ==================================================================== -->
+    <div id="main-menu-overlay" class="main-menu-container hidden">
       <div class="menu-bg-glow"></div>
       <canvas id="menuParticlesCanvas" class="menu-particles-canvas"></canvas>
 
@@ -31,7 +214,13 @@
           <div class="menu-ornament">✨ ॐ श्री गणेशाय नमः ✨</div>
           <h1 class="menu-title">🪔 GANESHA: THE DIVINE ADVENTURE</h1>
           <p class="menu-subtitle">“Three Chapters. Twenty-Four Levels. One Divine Journey.”</p>
-          <div id="menu-tap-hint" class="menu-tap-hint">🔔 Tap anywhere to play with divine music</div>
+          
+          <!-- Player Profile Badge in Menu (Clickable to open profile dashboard) -->
+          <div class="menu-player-bar" id="menu-player-bar" title="View Full Profile">
+            <span id="menu-player-avatar" class="menu-player-avatar">🐘</span>
+            <span>Welcome, <strong id="menu-player-name">Devotee</strong>!</span>
+            <button id="btn-edit-profile" class="edit-profile-btn" type="button" title="View & Edit Profile">👤 Profile</button>
+          </div>
         </header>
 
         <!-- Center Hero Showcase: Lord Ganesha -->
@@ -51,29 +240,33 @@
 
         <!-- Working Navigation Buttons -->
         <nav class="menu-navigation" aria-label="Main Menu Navigation">
-          <button id="btn-menu-start" class="menu-btn primary-start-btn" type="button">
+          <button id="btn-menu-continue" class="menu-btn primary-start-btn" type="button">
             <span class="btn-icon">▶</span>
-            <span class="btn-text">START GAME</span>
-          </button>
-          <button id="btn-menu-how" class="menu-btn secondary-menu-btn" type="button">
-            <span class="btn-icon">🎮</span>
-            <span class="btn-text">HOW TO PLAY</span>
-          </button>
-          <button id="btn-menu-rules" class="menu-btn secondary-menu-btn" type="button">
-            <span class="btn-icon">📜</span>
-            <span class="btn-text">GAME RULES</span>
+            <span class="btn-text">CONTINUE GAME</span>
           </button>
           <button id="btn-menu-chapters" class="menu-btn secondary-menu-btn" type="button">
             <span class="btn-icon">🗺️</span>
             <span class="btn-text">CHAPTERS & LEVELS</span>
+          </button>
+          <button id="btn-menu-leaderboard" class="menu-btn secondary-menu-btn" type="button">
+            <span class="btn-icon">🏆</span>
+            <span class="btn-text">LEADERBOARD</span>
+          </button>
+          <button id="btn-menu-settings" class="menu-btn secondary-menu-btn" type="button">
+            <span class="btn-icon">⚙️</span>
+            <span class="btn-text">SETTINGS</span>
+          </button>
+          <button id="btn-menu-how" class="menu-btn secondary-menu-btn" type="button">
+            <span class="btn-icon">📖</span>
+            <span class="btn-text">HOW TO PLAY</span>
           </button>
         </nav>
 
         <!-- Audio & Utility Footer Bar -->
         <footer class="menu-footer-bar">
           <div class="menu-audio-controls">
-            <button id="btn-menu-music" class="menu-icon-btn" title="Toggle Music (M)" type="button">🎵 Music: <span id="menu-music-status">ON</span></button>
-            <button id="btn-menu-sound" class="menu-icon-btn" title="Toggle SFX" type="button">🔊 SFX: <span id="menu-sound-status">ON</span></button>
+            <button id="btn-menu-music" class="menu-icon-btn" title="Toggle Music (M)" type="button"><span id="menu-music-icon">🔊</span> Music: <span id="menu-music-status">ON</span></button>
+            <button id="btn-menu-sound" class="menu-icon-btn" title="Toggle SFX" type="button">🔔 SFX: <span id="menu-sound-status">ON</span></button>
           </div>
           <div class="menu-credits">
             <span>A Sacred Indian Mythological Adventure Game</span>
@@ -90,6 +283,14 @@
       <!-- Player Status Left -->
       <div class="hud-left">
         <div class="status-meter-group">
+          <div class="meter-container player-tag" id="hud-player-tag" title="Active Devotee">
+            <span id="hud-player-avatar" class="meter-icon">🐘</span>
+            <span id="hud-player-name" class="meter-label player-name-tag">Devotee</span>
+          </div>
+          <div class="meter-container lives-meter" title="Ganesha's Sacred Lives (3)">
+            <span class="meter-icon">❤️</span>
+            <span id="lives-display" class="lives-hearts">❤️❤️❤️</span>
+          </div>
           <div class="meter-container health-meter">
             <span class="meter-icon">🌺</span>
             <div class="bar-outer">
@@ -122,14 +323,22 @@
         </div>
       </div>
 
-      <!-- Score & Utility Buttons Right -->
+      <!-- Score, Coins & Utility Buttons Right -->
       <div class="hud-right">
-        <div class="score-display">
-          <span class="modak-icon">🥮</span>
+        <div class="score-display" title="Divine Score (⭐)">
+          <span class="score-icon">⭐</span>
           <span id="score-text">0</span>
         </div>
-        <button id="btn-sound" class="icon-btn" title="Toggle Sound (SFX)" aria-label="Toggle Sound">🔊</button>
-        <button id="btn-music" class="icon-btn" title="Toggle Background Music (M)" aria-label="Toggle Music">🎵</button>
+        <div class="coins-display" title="Sacred Coins (🪙)">
+          <span class="coin-icon">🪙</span>
+          <span id="coins-text">0</span>
+        </div>
+        <div class="modaks-display" title="Modaks Collected (🥮)">
+          <span class="modak-icon">🥮</span>
+          <span id="modaks-text">0</span>
+        </div>
+        <button id="btn-sound" class="icon-btn sound-btn" title="Toggle Sound SFX" aria-label="Toggle Sound Effects">🔔</button>
+        <button id="btn-music" class="icon-btn music-btn" title="Music: ON (Click to Mute)" aria-label="Toggle Background Music">🔊</button>
         <div id="volume-control-wrapper" class="volume-control-wrapper" title="Adjust Master Volume">
           <input type="range" id="volume-slider" class="volume-slider" min="0" max="100" value="70" aria-label="Volume Slider">
         </div>
@@ -221,8 +430,8 @@
         <!-- Audio Settings in Pause Menu -->
         <div class="pause-audio-settings">
           <div class="audio-setting-item">
-            <button id="btn-pause-music" class="secondary-btn" type="button" aria-label="Toggle Music">Music: <span id="pause-music-status">ON 🎵</span></button>
-            <button id="btn-pause-sound" class="secondary-btn" type="button" aria-label="Toggle SFX">SFX: <span id="pause-sound-status">ON 🔊</span></button>
+            <button id="btn-pause-music" class="secondary-btn" type="button" aria-label="Toggle Music">Music: <span id="pause-music-status">🔊 ON</span></button>
+            <button id="btn-pause-sound" class="secondary-btn" type="button" aria-label="Toggle SFX">SFX: <span id="pause-sound-status">🔔 ON</span></button>
           </div>
           <div class="volume-slider-box">
             <span class="volume-label">Volume: <strong id="volume-val-display">70%</strong></span>
@@ -246,10 +455,12 @@
       <div class="modal-card game-over-card">
         <div class="card-ornament">🕉️</div>
         <h2>Divine Energy Dimmed</h2>
-        <p>The young guardian's spirit needs a moment to regain holy strength.</p>
+        <p id="game-over-desc">Lord Ganesha needs a moment to regain his holy strength.</p>
         <div class="menu-actions">
-          <button id="btn-retry" class="divine-btn pulse">Try Again</button>
+          <button id="btn-retry" class="divine-btn pulse">Try Again (Checkpoint)</button>
+          <button id="btn-restart-from-fail" class="secondary-btn">Restart Level</button>
           <button id="btn-open-levels-from-fail" class="secondary-btn">Choose Level</button>
+          <button id="btn-fail-home" class="secondary-btn">🏠 Main Menu</button>
         </div>
       </div>
     </div>
@@ -260,20 +471,41 @@
         <div class="card-ornament">🌺 ॐ 🌺</div>
         <h2 class="victory-title">Victory! Level Complete</h2>
         <p id="level-complete-subtitle">The sacred duty was upheld with honor.</p>
-        
+
+        <!-- Star Rating Display -->
+        <div class="stars-awarded" id="complete-stars">
+          <span class="star-icon active">⭐</span>
+          <span class="star-icon active">⭐</span>
+          <span class="star-icon active">⭐</span>
+        </div>
+
         <div class="score-summary">
           <div class="stat-box">
-            <span class="stat-label">Modaks Collected</span>
+            <span class="stat-label">Modaks / Items</span>
             <span id="complete-modaks" class="stat-value">0</span>
           </div>
           <div class="stat-box">
-            <span class="stat-label">Enemies Subdued</span>
-            <span id="complete-enemies" class="stat-value">0</span>
+            <span class="stat-label">Time</span>
+            <span id="complete-time" class="stat-value">0:00</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Lives Left</span>
+            <span id="complete-lives" class="stat-value">❤️❤️❤️</span>
           </div>
           <div class="stat-box">
             <span class="stat-label">Level Score</span>
             <span id="complete-score" class="stat-value">0</span>
           </div>
+        </div>
+
+        <!-- Special Badges -->
+        <div id="complete-badges" class="complete-badges">
+          <!-- Populated dynamically: Perfect Clear, Flawless, All Items -->
+        </div>
+
+        <!-- New Level Unlocked Pill -->
+        <div id="complete-unlocked-msg" class="unlocked-pill hidden">
+          ✨ New Level Unlocked! ✨
         </div>
 
         <div class="story-continuation-box">
@@ -295,9 +527,9 @@
         <h2 id="level-select-title">SELECT A LEVEL</h2>
         <p class="modal-subtitle-text" id="level-select-subtitle">Choose any unlocked divine trial to play</p>
         <div class="chapter-tabs">
-          <button id="tab-chap-1" class="tab-btn active" type="button">Chapter 1: The Divine Awakening (L1–8)</button>
-          <button id="tab-chap-2" class="tab-btn" type="button">Chapter 2: The Sacred Trials (L9–16)</button>
-          <button id="tab-chap-3" class="tab-btn" type="button">Chapter 3: The Great Divine Race (L17–24)</button>
+          <button id="tab-chap-1" class="tab-btn active" type="button">Chapter 1: The Sacred Temple (L1–8)</button>
+          <button id="tab-chap-2" class="tab-btn" type="button">Chapter 2: The Divine Battle (L9–16)</button>
+          <button id="tab-chap-3" class="tab-btn" type="button">Chapter 3: The Divine Adventure (L17–24)</button>
         </div>
         <div class="level-grid" id="level-grid">
           <!-- Populated dynamically by JavaScript with 8 levels, names, and completion badges -->
@@ -321,13 +553,13 @@
           <!-- Chapter 1 -->
           <div class="chapter-card unlocked" id="menu-chap-card-1">
             <div class="chap-card-header">
-              <span class="chap-badge-icon">🪔</span>
+              <span class="chap-badge-icon">🏛️</span>
               <div class="chap-badge-info">
-                <h3>CHAPTER 1: THE BIRTH</h3>
+                <h3>CHAPTER 1: THE SACRED TEMPLE</h3>
                 <span class="chap-level-range">Levels 1–8</span>
               </div>
             </div>
-            <p class="chap-synopsis">Mother Parvati creates the young divine guardian to protect the sacred entrance to Mount Kailash.</p>
+            <p class="chap-synopsis">An ancient sacred temple with golden colonnades, fragrant flower gardens, blessing bells, and holy river crossings.</p>
             <div class="chap-action-row">
               <span class="chap-status-pill status-unlocked">✓ UNLOCKED</span>
               <button class="divine-btn select-chapter-action" id="btn-select-chap-1" type="button">Enter Chapter 1 ➔</button>
@@ -339,11 +571,11 @@
             <div class="chap-card-header">
               <span class="chap-badge-icon">⚔️</span>
               <div class="chap-badge-info">
-                <h3>CHAPTER 2: OBSTACLES</h3>
+                <h3>CHAPTER 2: THE DIVINE BATTLE</h3>
                 <span class="chap-level-range">Levels 9–16</span>
               </div>
             </div>
-            <p class="chap-synopsis">Lord Ganesha overcomes fire trials, forest demons, and the colossal shape-shifting boss Vighnasura.</p>
+            <p class="chap-synopsis">Lord Ganesha faces the Asura army! Battle menacing grunts, agile scouts, patrolling sentinels, shadow beasts, corrupted wisps, armored champions, and the fearsome Asura Warlord.</p>
             <div class="chap-action-row">
               <span id="chap2-lock-status" class="chap-status-pill status-locked">🔒 LOCKED (Reach L9)</span>
               <button class="secondary-btn select-chapter-action" id="btn-select-chap-2" type="button">Enter Chapter 2 ➔</button>
@@ -353,13 +585,13 @@
           <!-- Chapter 3 -->
           <div class="chapter-card" id="menu-chap-card-3">
             <div class="chap-card-header">
-              <span class="chap-badge-icon">🏆</span>
+              <span class="chap-badge-icon">✨</span>
               <div class="chap-badge-info">
-                <h3>CHAPTER 3: THE GREAT RACE</h3>
+                <h3>CHAPTER 3: THE DIVINE ADVENTURE</h3>
                 <span class="chap-level-range">Levels 17–24</span>
               </div>
             </div>
-            <p class="chap-synopsis">The legendary divine race around the cosmos against Lord Kartikeya, won with supreme filial wisdom.</p>
+            <p class="chap-synopsis">A celestial heavenly kingdom featuring floating cloud kingdoms, magical gates, glowing sky rivers, and the grand divine finale.</p>
             <div class="chap-action-row">
               <span id="chap3-lock-status" class="chap-status-pill status-locked">🔒 LOCKED (Reach L17)</span>
               <button class="secondary-btn select-chapter-action" id="btn-select-chap-3" type="button">Enter Chapter 3 ➔</button>
@@ -456,6 +688,137 @@
     </div>
 
     <!-- ====================================================================
+         🏆 LEADERBOARD MODAL
+         ==================================================================== -->
+    <div id="leaderboard-modal" class="modal-overlay hidden">
+      <div class="modal-card leaderboard-card">
+        <div class="card-ornament">🏆 ॐ श्री गणेशाय नमः 🏆</div>
+        <h2 class="menu-modal-title">DEVOTEE LEADERBOARD</h2>
+        <p class="modal-subtitle-text">Honoring the supreme devotees across all 24 sacred trials</p>
+
+        <div class="leaderboard-table-container">
+          <table class="leaderboard-table" id="leaderboard-table">
+            <thead>
+              <tr>
+                <th class="col-rank">Rank</th>
+                <th class="col-player">Devotee</th>
+                <th class="col-level">Levels</th>
+                <th class="col-stars">Stars</th>
+                <th class="col-score">Total Score</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-tbody">
+              <!-- Dynamically populated by script.js -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="leaderboard-current-player-banner" id="leaderboard-player-banner">
+          <span class="banner-avatar" id="banner-player-avatar">🐘</span>
+          <span class="banner-text">Your Rank: <strong id="player-rank-display">#1</strong> (<span id="banner-player-name">Devotee</span>)</span>
+          <span class="banner-score">Score: <strong id="player-score-display">0</strong></span>
+        </div>
+
+        <div class="menu-actions">
+          <button id="btn-close-leaderboard" class="divine-btn" type="button">◀ BACK TO MAIN MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         ⚙️ SETTINGS MODAL
+         ==================================================================== -->
+    <div id="settings-modal" class="modal-overlay hidden">
+      <div class="modal-card settings-card">
+        <div class="card-ornament">⚙️ ॐ ⚙️</div>
+        <h2 class="menu-modal-title">GAME SETTINGS</h2>
+        <p class="modal-subtitle-text">Customize your divine adventure audio, controls, vibration & profile</p>
+
+        <div class="settings-list">
+          <!-- Audio: Music -->
+          <div class="settings-row">
+            <div class="setting-info">
+              <span class="setting-title">🎵 Temple Music</span>
+              <span class="setting-desc">Devotional sitar, flute & tanpura hymns</span>
+            </div>
+            <button id="settings-music-btn" class="settings-toggle-btn active" type="button">🔊 ON</button>
+          </div>
+
+          <!-- Audio: SFX -->
+          <div class="settings-row">
+            <div class="setting-info">
+              <span class="setting-title">🔔 Sacred Sound Effects</span>
+              <span class="setting-desc">Temple bells, modak chimes & strikes</span>
+            </div>
+            <button id="settings-sound-btn" class="settings-toggle-btn active" type="button">🔔 ON</button>
+          </div>
+
+          <!-- Audio: Master Volume -->
+          <div class="settings-row">
+            <div class="setting-info">
+              <span class="setting-title">🎚️ Master Volume</span>
+              <span class="setting-desc" id="settings-volume-label">Current: 70%</span>
+            </div>
+            <div class="settings-slider-wrap">
+              <input type="range" id="settings-volume-slider" class="volume-slider" min="0" max="100" value="70">
+            </div>
+          </div>
+
+          <!-- Mobile Vibration Toggle -->
+          <div class="settings-row">
+            <div class="setting-info">
+              <span class="setting-title">📳 Mobile Vibration</span>
+              <span class="setting-desc">Haptic feedback on jumps, strikes & hits</span>
+            </div>
+            <button id="settings-vibration-btn" class="settings-toggle-btn active" type="button">📳 ON</button>
+          </div>
+
+          <!-- Profile: Devotee Name & Avatar -->
+          <div class="settings-row">
+            <div class="setting-info">
+              <span class="setting-title">👤 Devotee Profile</span>
+              <span class="setting-desc">View stats, change name or divine seal</span>
+            </div>
+            <div class="settings-btn-group">
+              <button id="btn-settings-view-profile" class="secondary-btn" type="button">👤 View</button>
+              <button id="btn-settings-rename" class="secondary-btn" type="button">✏️ Edit</button>
+            </div>
+          </div>
+
+          <!-- Reset Progress -->
+          <div class="settings-row danger-row">
+            <div class="setting-info">
+              <span class="setting-title">⚠️ Reset Progress</span>
+              <span class="setting-desc">Reset unlocked levels, stars, and scores</span>
+            </div>
+            <button id="btn-settings-reset" class="danger-btn" type="button">🗑️ Reset All</button>
+          </div>
+        </div>
+
+        <div class="menu-actions">
+          <button id="btn-close-settings" class="divine-btn" type="button">✓ CLOSE SETTINGS</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         ⚠️ RESET PROGRESS CONFIRMATION MODAL
+         ==================================================================== -->
+    <div id="reset-confirm-modal" class="modal-overlay hidden">
+      <div class="modal-card reset-confirm-card">
+        <div class="card-ornament">⚠️ ॐ ⚠️</div>
+        <h2 class="menu-modal-title danger-title">RESET PROGRESS?</h2>
+        <p class="reset-warning-text">
+          Are you sure you want to reset your sacred journey? This will return your adventure to <strong>Level 1</strong>, reset all collected stars, and restart your scores.
+        </p>
+        <div class="reset-actions">
+          <button id="btn-confirm-reset" class="danger-btn reset-action-btn" type="button">🗑️ YES, RESET PROGRESS</button>
+          <button id="btn-cancel-reset" class="secondary-btn reset-action-btn" type="button">✕ CANCEL & KEEP</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
          FEATURE 1: PREMIUM CHAPTER SELECTION SCREEN
          ==================================================================== -->
     <div id="chapters-index-modal" class="modal-overlay hidden">
@@ -476,10 +839,10 @@
               </div>
             </div>
             <div class="chapter-card-info">
-              <h3 class="chapter-card-name">Chapter 1 — The Divine Awakening</h3>
+              <h3 class="chapter-card-name">Chapter 1 — The Sacred Temple</h3>
               <span class="chapter-card-levels">Levels 1–8</span>
               <p class="chapter-card-desc">
-                Mother Parvati creates the young divine guardian. Guard the sacred palace gates, master holy combat, and witness the sacred coronation of Lord Ganesha.
+                An ancient sacred temple with golden colonnades, fragrant flower gardens, blessing bells, and holy river crossings. Master Ganesha's movement and claim temple blessings.
               </p>
             </div>
             <div class="chapter-card-footer">
@@ -494,17 +857,17 @@
           <!-- Chapter 2 -->
           <div class="premium-chapter-box" id="index-card-chap-2">
             <div class="chapter-card-banner">
-              <img src="chapter2_trials.jpg" alt="Chapter 2 — The Sacred Trials" class="chapter-card-img" loading="lazy">
+              <img src="chapter2_trials.jpg" alt="Chapter 2 — The Divine Battle" class="chapter-card-img" loading="lazy">
               <div class="chapter-badge-overlay">
                 <span class="chap-num-badge">CHAPTER 2</span>
                 <span class="chap-count-badge">8 Playable Levels</span>
               </div>
             </div>
             <div class="chapter-card-info">
-              <h3 class="chapter-card-name">Chapter 2 — The Sacred Trials</h3>
+              <h3 class="chapter-card-name">Chapter 2 — The Divine Battle</h3>
               <span class="chapter-card-levels">Levels 9–16</span>
               <p class="chapter-card-desc">
-                Lord Ganesha confronts mystic fire trials, ancient puzzle gates, and subdues the colossal shapeshifting obstacle lord Vighnasura.
+                An action-packed realm of divine combat! Strike with your sacred Gada, dodge cunning enemy attacks, defeat varied Asura enemy forces, and conquer the mighty Asura Warlord.
               </p>
             </div>
             <div class="chapter-card-footer">
@@ -519,17 +882,17 @@
           <!-- Chapter 3 -->
           <div class="premium-chapter-box" id="index-card-chap-3">
             <div class="chapter-card-banner">
-              <img src="chapter3_race.jpg" alt="Chapter 3 — The Great Divine Race" class="chapter-card-img" loading="lazy">
+              <img src="chapter3_race.jpg" alt="Chapter 3 — The Divine Adventure" class="chapter-card-img" loading="lazy">
               <div class="chapter-badge-overlay">
                 <span class="chap-num-badge">CHAPTER 3</span>
                 <span class="chap-count-badge">8 Playable Levels</span>
               </div>
             </div>
             <div class="chapter-card-info">
-              <h3 class="chapter-card-name">Chapter 3 — The Great Divine Race</h3>
+              <h3 class="chapter-card-name">Chapter 3 — The Divine Adventure</h3>
               <span class="chapter-card-levels">Levels 17–24</span>
               <p class="chapter-card-desc">
-                The cosmic race around the universe against Lord Kartikeya. Circle Mount Kailash with supreme filial devotion and prove wisdom is greater than speed.
+                A celestial heavenly kingdom featuring floating cloud kingdoms, magical gates, glowing sky rivers, celestial trials, and the grand divine finale.
               </p>
             </div>
             <div class="chapter-card-footer">
@@ -570,7 +933,7 @@
 
         <div class="menu-actions">
           <button id="btn-chapter-replay" class="secondary-btn">Replay Chapter 1</button>
-          <button id="btn-chapter-two" class="divine-btn pulse" title="Begin Chapter 2: The Remover of Obstacles">Start Chapter 2 ➔</button>
+          <button id="btn-chapter-two" class="divine-btn pulse" title="Begin Chapter 2: The Divine Battle">Start Chapter 2 ➔</button>
         </div>
       </div>
     </div>
@@ -579,7 +942,7 @@
     <div id="chapter2-complete-modal" class="modal-overlay hidden">
       <div class="modal-card grand-celebration-card">
         <div class="card-ornament">✨ ॐ गं गणपतये नमः ✨</div>
-        <h1 class="grand-title" style="font-size: 22px;">🐘 GANESHA — THE REMOVER OF OBSTACLES</h1>
+        <h1 class="grand-title" style="font-size: 22px;">⚔️ THE DIVINE BATTLE VICTORY</h1>
         <h2 class="victory-title" style="color: #ffd700; font-size: 20px; margin: 6px 0;">CHAPTER 2 COMPLETE</h2>
         
         <div class="transformation-preview">
@@ -587,7 +950,7 @@
         </div>
 
         <p class="grand-story-text">
-          Through boundless wisdom, compassion, and holy power, Lord Ganesha subdued Vighnasura, transforming the lord of obstacles into a faithful devotee! Peace and righteousness are restored to the divine kingdom.
+          Through boundless courage, divine wisdom, and heroic strikes of his consecrated Gada, Lord Ganesha vanquished the Asura Warlord Krodhasura and banished the shadow armies! Peace and righteousness are restored to the sacred mountain.
         </p>
 
         <h3 style="color: #00e5ff; font-family: var(--font-royal); margin: 10px 0; letter-spacing: 1px;">“The Divine Adventure Continues…”</h3>
@@ -689,10 +1052,20 @@
             <span class="final-stat-label">Total Score</span>
             <strong class="final-stat-val" id="final-victory-score">0</strong>
           </div>
+          <div class="final-stat-box">
+            <span class="stat-icon">⭐</span>
+            <span class="final-stat-label">Stars Earned</span>
+            <strong class="final-stat-val" id="final-victory-stars">72 / 72</strong>
+          </div>
+          <div class="final-stat-box">
+            <span class="stat-icon">🍬</span>
+            <span class="final-stat-label">Total Modaks</span>
+            <strong class="final-stat-val" id="final-victory-modaks">0</strong>
+          </div>
           <div class="final-stat-box highlight">
             <span class="stat-icon">✨</span>
             <span class="final-stat-label">Completion Status</span>
-            <strong class="final-stat-val status-complete">DIVINE JOURNEY COMPLETE</strong>
+            <strong class="final-stat-val status-complete" id="final-victory-pct">100% COMPLETE</strong>
           </div>
         </div>
 
@@ -724,7 +1097,7 @@
 
       <!-- Quick Mobile Utility Center -->
       <div class="touch-cluster touch-util">
-        <button id="touch-music" class="touch-btn touch-util-btn" type="button" aria-label="Toggle Music" title="Toggle Music">🎵</button>
+        <button id="touch-music" class="touch-btn touch-util-btn" type="button" aria-label="Toggle Music" title="Toggle Music">🔊</button>
         <button id="touch-pause" class="touch-btn touch-util-btn" type="button" aria-label="Pause Game" title="Pause Game">II</button>
         <button id="touch-restart" class="touch-btn touch-util-btn" type="button" aria-label="Restart Level" title="Restart Level">↻</button>
       </div>
@@ -749,11 +1122,15 @@
 
   </div>
 
-  <!-- Dedicated Cross-Platform Background Music Player -->
-  <audio id="bg-music-player" preload="auto" loop playsinline></audio>
+  <!-- Dedicated Background Music Player for 60-Second Original Devotional Soundtrack -->
+  <audio id="bg-music-player" preload="auto" loop playsinline>
+    <source src="ganesha-theme.wav" type="audio/wav">
+    <source src="audio/ganesha-theme.wav" type="audio/wav">
+    <source src="ganesha-theme.mp3" type="audio/mpeg">
+    <source src="audio/ganesha-theme.mp3" type="audio/mpeg">
+    <source src="Divine%20Race%20(1).mp3" type="audio/mpeg">
+  </audio>
 
-  <script src="script.js"></script>
-<source src="Ganesha.mp3" type="audio/mpeg">
-</button>
+  <script src="script.js?v=2.2"></script>
 </body>
 </html>

@@ -22,55 +22,613 @@
 // ==========================================================================
 // 1. AUDIO ENGINE (Multi-Track Background Music + Procedural SFX)
 // ==========================================================================
+// ==========================================================================
+// 1. PROCEDURAL BACKGROUND MUSIC GENERATOR (Web Audio API)
+// 60-Second Peaceful, Devotional, Joyful Indian Instrumental Soundtrack
+// Instruments: Bansuri Flute, Temple Bells (Ghanti), Tabla, Manjira, Tanpura Drone, Santoor
+// Scale: Raga Bhupali / Mohanam (Sacred Pentatonic in D: D, E, F#, A, B)
+// 100% Original, No Vocals, No Copyright, Zero External Dependencies, Seamless Loop
+// ==========================================================================
+class ProceduralBGM {
+  constructor(audioEngine) {
+    this.engine = audioEngine;
+    this.ctx = audioEngine.ctx;
+    this.isPlaying = false;
+    this.currentStep = 0;
+
+    // 60-Second Master Loop Architecture:
+    // 108 BPM, 27 measures of 4/4 = 108 beats = 432 steps (16th notes)
+    // 108 beats * (60s / 108 beats) = exactly 60.00 seconds!
+    this.tempo = 108;
+    this.totalSteps = 432; // 27 bars x 16 steps
+    this.stepTime = (60 / this.tempo) / 4; // ~0.138889s
+    this.nextNoteTime = 0;
+    this.timerID = null;
+    this.scheduleAheadTime = 0.16; // 160ms schedule lookahead window
+    this.lookahead = 25; // 25ms timer interval
+
+    // Audio Graph Gain Nodes
+    this.bgmGain = null;
+    this.tanpuraGain = null;
+    this.fluteGain = null;
+    this.percussionGain = null;
+    this.bellGain = null;
+    this.santoorGain = null;
+
+    // Drone Nodes
+    this.droneNodes = [];
+    this.droneLfo = null;
+    this.isDroneActive = false;
+
+    // Mood Mode
+    this.mode = 'gameplay';
+
+    // Sacred Frequencies (Raga Bhupali in Key of D)
+    this.freqs = {
+      'D3': 146.83,
+      'A3': 220.00,
+      'B3': 246.94,
+      'D4': 293.66,
+      'E4': 329.63,
+      'F#4': 369.99,
+      'A4': 440.00,
+      'B4': 493.88,
+      'D5': 587.33,
+      'E5': 659.25,
+      'F#5': 739.99,
+      'A5': 880.00,
+      'B5': 987.77,
+      'D6': 1174.66
+    };
+
+    // 432-Step Devotional Melody Score (Full 60 Seconds)
+    this.melodyScore = this.build60sMelodyScore();
+  }
+
+  build60sMelodyScore() {
+    // 27 measures (108 beats, 432 steps) in Raga Bhupali
+    return {
+      // --- SECTION 1: Auspicious Dawn & Invocation (Bars 1-6, Steps 0-95) ---
+      0:   { note: 'D4', dur: 3.5, vel: 0.70 },
+      4:   { note: 'E4', dur: 3.5, vel: 0.75 },
+      8:   { note: 'F#4', dur: 7.0, vel: 0.85, vibrato: true },
+      16:  { note: 'A4', dur: 3.5, vel: 0.80 },
+      20:  { note: 'B4', dur: 3.5, vel: 0.85 },
+      24:  { note: 'D5', dur: 7.5, vel: 0.90, vibrato: true },
+      32:  { note: 'D5', dur: 3.0, vel: 0.85 },
+      36:  { note: 'E5', dur: 3.0, vel: 0.90 },
+      40:  { note: 'F#5', dur: 6.5, vel: 0.95, vibrato: true },
+      48:  { note: 'E5', dur: 3.0, vel: 0.85 },
+      52:  { note: 'D5', dur: 3.0, vel: 0.80 },
+      56:  { note: 'B4', dur: 3.5, vel: 0.85 },
+      60:  { note: 'A4', dur: 3.5, vel: 0.80 },
+      64:  { note: 'F#4', dur: 7.0, vel: 0.85, vibrato: true },
+      72:  { note: 'E4', dur: 7.0, vel: 0.80, vibrato: true },
+      80:  { note: 'D4', dur: 14.0, vel: 0.88, vibrato: true },
+
+      // --- SECTION 2: Joyful Adventure & Modak Celebration (Bars 7-14, Steps 96-223) ---
+      96:  { note: 'F#4', dur: 3.5, vel: 0.82 },
+      100: { note: 'A4', dur: 3.5, vel: 0.85 },
+      104: { note: 'B4', dur: 3.5, vel: 0.90 },
+      108: { note: 'D5', dur: 3.5, vel: 0.95 },
+      112: { note: 'E5', dur: 3.5, vel: 0.90 },
+      116: { note: 'F#5', dur: 6.0, vel: 0.95, vibrato: true },
+      124: { note: 'E5', dur: 2.5, vel: 0.85 },
+      127: { note: 'D5', dur: 2.5, vel: 0.82 },
+      130: { note: 'B4', dur: 3.5, vel: 0.88 },
+      134: { note: 'D5', dur: 3.5, vel: 0.90 },
+      138: { note: 'B4', dur: 3.5, vel: 0.85 },
+      142: { note: 'A4', dur: 3.5, vel: 0.82 },
+      146: { note: 'F#4', dur: 7.0, vel: 0.88, vibrato: true },
+      154: { note: 'A4', dur: 5.0, vel: 0.85, vibrato: true },
+      160: { note: 'D5', dur: 3.5, vel: 0.90 },
+      164: { note: 'E5', dur: 3.5, vel: 0.92 },
+      168: { note: 'F#5', dur: 3.5, vel: 0.95 },
+      172: { note: 'A5', dur: 7.0, vel: 1.00, vibrato: true }, // Mountain Kailash peak
+      180: { note: 'F#5', dur: 3.5, vel: 0.90 },
+      184: { note: 'E5', dur: 3.5, vel: 0.85 },
+      188: { note: 'D5', dur: 3.5, vel: 0.85 },
+      192: { note: 'B4', dur: 3.5, vel: 0.82 },
+      196: { note: 'A4', dur: 5.0, vel: 0.85, vibrato: true },
+      202: { note: 'B4', dur: 2.5, vel: 0.82 },
+      205: { note: 'D5', dur: 6.0, vel: 0.88, vibrato: true },
+      212: { note: 'B4', dur: 3.5, vel: 0.82 },
+      216: { note: 'A4', dur: 7.0, vel: 0.85, vibrato: true },
+
+      // --- SECTION 3: Sacred Temple Radiance (Bars 15-21, Steps 224-335) ---
+      224: { note: 'A4', dur: 3.5, vel: 0.82 },
+      228: { note: 'B4', dur: 3.5, vel: 0.85 },
+      232: { note: 'D5', dur: 3.5, vel: 0.90 },
+      236: { note: 'E5', dur: 3.5, vel: 0.95 },
+      240: { note: 'F#5', dur: 7.0, vel: 0.98, vibrato: true },
+      248: { note: 'E5', dur: 3.5, vel: 0.88 },
+      252: { note: 'D5', dur: 3.5, vel: 0.85 },
+      256: { note: 'B4', dur: 3.5, vel: 0.85 },
+      260: { note: 'D5', dur: 3.5, vel: 0.90 },
+      264: { note: 'E5', dur: 7.0, vel: 0.92, vibrato: true },
+      272: { note: 'D5', dur: 7.0, vel: 0.88, vibrato: true },
+      280: { note: 'B4', dur: 3.5, vel: 0.85 },
+      284: { note: 'A4', dur: 3.5, vel: 0.82 },
+      288: { note: 'F#4', dur: 7.0, vel: 0.88, vibrato: true },
+      296: { note: 'A4', dur: 7.0, vel: 0.85, vibrato: true },
+      304: { note: 'B4', dur: 3.5, vel: 0.88 },
+      308: { note: 'D5', dur: 3.5, vel: 0.92 },
+      312: { note: 'E5', dur: 3.5, vel: 0.90 },
+      316: { note: 'D5', dur: 3.5, vel: 0.85 },
+      320: { note: 'B4', dur: 7.0, vel: 0.85, vibrato: true },
+      328: { note: 'A4', dur: 7.0, vel: 0.82, vibrato: true },
+
+      // --- SECTION 4: Auspicious Cadence & Seamless Loop Return (Bars 22-27, Steps 336-431) ---
+      336: { note: 'F#4', dur: 3.5, vel: 0.85 },
+      340: { note: 'E4', dur: 3.5, vel: 0.80 },
+      344: { note: 'D4', dur: 3.5, vel: 0.80 },
+      348: { note: 'E4', dur: 3.5, vel: 0.82 },
+      352: { note: 'F#4', dur: 5.5, vel: 0.85, vibrato: true },
+      358: { note: 'A4', dur: 2.5, vel: 0.82 },
+      361: { note: 'B4', dur: 5.5, vel: 0.88, vibrato: true },
+      368: { note: 'A4', dur: 3.5, vel: 0.82 },
+      372: { note: 'F#4', dur: 3.5, vel: 0.85 },
+      376: { note: 'E4', dur: 3.5, vel: 0.80 },
+      380: { note: 'F#4', dur: 3.5, vel: 0.85 },
+      384: { note: 'D4', dur: 18.0, vel: 0.92, vibrato: true }, // Auspicious resting note on Sa
+      404: { note: 'E4', dur: 3.5, vel: 0.72 },
+      408: { note: 'F#4', dur: 3.5, vel: 0.75 },
+      412: { note: 'E4', dur: 3.5, vel: 0.70 },
+      416: { note: 'D4', dur: 15.0, vel: 0.88, vibrato: true }  // Loops seamlessly back to step 0
+    };
+  }
+
+  ensureAudioGraph() {
+    if (!this.ctx) {
+      this.ctx = this.engine.ctx;
+    }
+    if (!this.bgmGain && this.ctx) {
+      this.bgmGain = this.ctx.createGain();
+      const initialGain = (this.engine.musicEnabled && this.engine.volume > 0) ? (this.engine.volume * 0.70) : 0.0001;
+      this.bgmGain.gain.setValueAtTime(initialGain, this.ctx.currentTime);
+      this.bgmGain.connect(this.engine.masterGain || this.ctx.destination);
+
+      this.tanpuraGain = this.ctx.createGain();
+      this.tanpuraGain.gain.setValueAtTime(0.30, this.ctx.currentTime);
+      this.tanpuraGain.connect(this.bgmGain);
+
+      this.fluteGain = this.ctx.createGain();
+      this.fluteGain.gain.setValueAtTime(0.85, this.ctx.currentTime);
+      this.fluteGain.connect(this.bgmGain);
+
+      this.percussionGain = this.ctx.createGain();
+      this.percussionGain.gain.setValueAtTime(0.70, this.ctx.currentTime);
+      this.percussionGain.connect(this.bgmGain);
+
+      this.bellGain = this.ctx.createGain();
+      this.bellGain.gain.setValueAtTime(0.55, this.ctx.currentTime);
+      this.bellGain.connect(this.bgmGain);
+
+      this.santoorGain = this.ctx.createGain();
+      this.santoorGain.gain.setValueAtTime(0.40, this.ctx.currentTime);
+      this.santoorGain.connect(this.bgmGain);
+    }
+  }
+
+  // --- INSTRUMENT: BANSURI (Divine Bamboo Flute) ---
+  playBansuriNote(time, noteName, durSteps, velocity, hasVibrato) {
+    if (!this.ctx || !this.fluteGain) return;
+    const freq = this.freqs[noteName] || 293.66;
+    const dur = durSteps * this.stepTime;
+
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(freq, time);
+
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(freq * 1.002, time);
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2400, time);
+    filter.Q.setValueAtTime(2.0, time);
+
+    const noteGain = this.ctx.createGain();
+    const targetAmp = 0.22 * velocity;
+    const attackTime = 0.04;
+    const releaseTime = Math.min(0.14, dur * 0.3);
+
+    noteGain.gain.setValueAtTime(0.0001, time);
+    noteGain.gain.exponentialRampToValueAtTime(targetAmp, time + attackTime);
+    noteGain.gain.setValueAtTime(targetAmp, time + Math.max(attackTime, dur - releaseTime));
+    noteGain.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+
+    if (hasVibrato && dur > 0.38) {
+      const vibOsc = this.ctx.createOscillator();
+      const vibGain = this.ctx.createGain();
+      vibOsc.type = 'sine';
+      vibOsc.frequency.setValueAtTime(5.25, time);
+      vibGain.gain.setValueAtTime(0.0, time);
+      vibGain.gain.setValueAtTime(0.0, time + 0.18);
+      vibGain.gain.linearRampToValueAtTime(freq * 0.015, time + 0.42);
+
+      vibOsc.connect(vibGain);
+      vibGain.connect(osc1.frequency);
+      vibGain.connect(osc2.frequency);
+      vibOsc.start(time);
+      vibOsc.stop(time + dur + 0.05);
+    }
+
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(noteGain);
+    noteGain.connect(this.fluteGain);
+
+    osc1.start(time);
+    osc2.start(time);
+    osc1.stop(time + dur + 0.05);
+    osc2.stop(time + dur + 0.05);
+  }
+
+  // --- INSTRUMENT: TEMPLE BELLS (Ghanti) ---
+  playTempleBell(time, baseFreq = 880, velocity = 0.55) {
+    if (!this.ctx || !this.bellGain) return;
+    const modes = [
+      { ratio: 1.0,   amp: 0.16 * velocity, decay: 2.2 },
+      { ratio: 2.756, amp: 0.11 * velocity, decay: 1.5 },
+      { ratio: 5.404, amp: 0.06 * velocity, decay: 0.9 }
+    ];
+
+    modes.forEach(mode => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(baseFreq * mode.ratio, time);
+
+      gain.gain.setValueAtTime(0.0001, time);
+      gain.gain.linearRampToValueAtTime(mode.amp, time + 0.003);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + mode.decay);
+
+      osc.connect(gain);
+      gain.connect(this.bellGain);
+
+      osc.start(time);
+      osc.stop(time + mode.decay + 0.05);
+    });
+  }
+
+  // --- INSTRUMENT: MANJIRA (Finger Cymbals) ---
+  playManjira(time, velocity = 0.40) {
+    if (!this.ctx || !this.bellGain) return;
+    [3920, 5873].forEach((f, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f + (idx * 25), time);
+
+      gain.gain.setValueAtTime(0.0001, time);
+      gain.gain.linearRampToValueAtTime(0.05 * velocity, time + 0.002);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.14);
+
+      osc.connect(gain);
+      gain.connect(this.bellGain);
+
+      osc.start(time);
+      osc.stop(time + 0.15);
+    });
+  }
+
+  // --- INSTRUMENT: TABLA BAYAN (Bass "Dha" / "Ghe") ---
+  playTablaBayan(time, velocity = 0.65) {
+    if (!this.ctx || !this.percussionGain) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(96, time);
+    osc.frequency.exponentialRampToValueAtTime(48, time + 0.12);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(220, time);
+
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.linearRampToValueAtTime(0.34 * velocity, time + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.24);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.percussionGain);
+
+    osc.start(time);
+    osc.stop(time + 0.26);
+  }
+
+  // --- INSTRUMENT: TABLA DAYAN (Treble "Ta" / "Tin" / "Na") ---
+  playTablaDayan(time, velocity = 0.50, pitch = 'D4') {
+    if (!this.ctx || !this.percussionGain) return;
+    const baseFreq = this.freqs[pitch] || 293.66;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(baseFreq * 1.38, time);
+    osc.frequency.exponentialRampToValueAtTime(baseFreq, time + 0.02);
+
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(baseFreq, time);
+    filter.Q.setValueAtTime(5.0, time);
+
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.linearRampToValueAtTime(0.24 * velocity, time + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.16);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.percussionGain);
+
+    osc.start(time);
+    osc.stop(time + 0.18);
+  }
+
+  // --- INSTRUMENT: SANTOOR ARPEGGIO ---
+  playSantoorNote(time, noteName, velocity = 0.35) {
+    if (!this.ctx || !this.santoorGain) return;
+    const freq = this.freqs[noteName] || 587.33;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, time);
+
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.linearRampToValueAtTime(0.18 * velocity, time + 0.003);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + 1.2);
+
+    osc.connect(gain);
+    gain.connect(this.santoorGain);
+    osc.start(time);
+    osc.stop(time + 1.25);
+  }
+
+  // --- INSTRUMENT: TANPURA SACRED DRONE ---
+  startTanpuraDrone() {
+    if (this.isDroneActive || !this.ctx || !this.tanpuraGain) return;
+    try {
+      this.droneNodes = [];
+      const droneNotes = [
+        { freq: this.freqs['D3'], type: 'sine',     gain: 0.18 },
+        { freq: this.freqs['A3'], type: 'triangle', gain: 0.10 },
+        { freq: this.freqs['D4'], type: 'sine',     gain: 0.08 }
+      ];
+
+      this.droneLfo = this.ctx.createOscillator();
+      const lfoGain = this.ctx.createGain();
+      this.droneLfo.type = 'sine';
+      this.droneLfo.frequency.setValueAtTime(0.15, this.ctx.currentTime);
+      lfoGain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+      this.droneLfo.connect(lfoGain);
+      this.droneLfo.start();
+
+      droneNotes.forEach(cfg => {
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        osc.type = cfg.type;
+        osc.frequency.setValueAtTime(cfg.freq, this.ctx.currentTime);
+
+        g.gain.setValueAtTime(0.0001, this.ctx.currentTime);
+        g.gain.linearRampToValueAtTime(cfg.gain, this.ctx.currentTime + 1.2);
+
+        lfoGain.connect(g.gain);
+        osc.connect(g);
+        g.connect(this.tanpuraGain);
+
+        osc.start();
+        this.droneNodes.push({ osc, gain: g });
+      });
+
+      this.isDroneActive = true;
+    } catch (err) {
+      console.warn("Tanpura drone start:", err);
+    }
+  }
+
+  stopTanpuraDrone() {
+    if (!this.isDroneActive) return;
+    try {
+      const now = this.ctx ? this.ctx.currentTime : 0;
+      this.droneNodes.forEach(node => {
+        try {
+          node.gain.gain.setValueAtTime(node.gain.gain.value, now);
+          node.gain.gain.linearRampToValueAtTime(0.0001, now + 0.25);
+          node.osc.stop(now + 0.3);
+        } catch (_) {}
+      });
+      if (this.droneLfo) {
+        try { this.droneLfo.stop(now + 0.3); } catch (_) {}
+      }
+    } catch (_) {}
+    this.droneNodes = [];
+    this.droneLfo = null;
+    this.isDroneActive = false;
+  }
+
+  // --- SCHEDULING ENGINE ---
+  scheduler() {
+    if (!this.isPlaying || !this.ctx) return;
+    while (this.nextNoteTime < this.ctx.currentTime + this.scheduleAheadTime) {
+      this.scheduleStep(this.currentStep, this.nextNoteTime);
+      this.advanceStep();
+    }
+    this.timerID = setTimeout(() => this.scheduler(), this.lookahead);
+  }
+
+  scheduleStep(step, time) {
+    // 1. Melody (Bansuri)
+    const mel = this.melodyScore[step];
+    if (mel) {
+      this.playBansuriNote(time, mel.note, mel.dur, mel.vel, mel.vibrato || false);
+    }
+
+    // 2. Temple Bells (Ghanti)
+    if (step === 0 || step === 96 || step === 224 || step === 352) {
+      this.playTempleBell(time, 880, 0.70); // A5 Bell
+    } else if (step === 32 || step === 128 || step === 172 || step === 320) {
+      this.playTempleBell(time, 1174.66, 0.65); // High D6 Bell
+    }
+
+    // 3. Indian Percussion (Tabla & Manjira)
+    const isMenu = (this.mode === 'menu');
+    const isRace = (this.mode === 'race' || this.mode === 'chapter3');
+    const percVol = isMenu ? 0.45 : (isRace ? 0.85 : 0.68);
+
+    const stepInBar = step % 16;
+    const mIdx = Math.floor(step / 16);
+    const dynamicPerc = (mIdx < 2) ? (percVol * 0.6) : percVol;
+
+    // Tabla Bayan (Bass)
+    if (stepInBar === 0) {
+      this.playTablaBayan(time, dynamicPerc * 1.0); // "Dha"
+      this.playManjira(time, dynamicPerc * 0.85);
+    } else if (stepInBar === 6) {
+      this.playTablaBayan(time, dynamicPerc * 0.65); // "Ghe"
+    } else if (stepInBar === 8) {
+      this.playTablaBayan(time, dynamicPerc * 0.85); // "Dha"
+      this.playManjira(time, dynamicPerc * 0.80);
+    } else if (stepInBar === 12 && isRace) {
+      this.playTablaBayan(time, dynamicPerc * 0.70);
+    }
+
+    // Tabla Dayan (Treble)
+    if (stepInBar === 4) {
+      this.playTablaDayan(time, dynamicPerc * 0.75, 'D4'); // "Ta"
+    } else if (stepInBar === 10) {
+      this.playTablaDayan(time, dynamicPerc * 0.70, 'A4'); // "Tin"
+    } else if (stepInBar === 14) {
+      this.playTablaDayan(time, dynamicPerc * 0.65, 'D4'); // "Na"
+    } else if ((stepInBar === 2 || stepInBar === 8) && isRace) {
+      this.playTablaDayan(time, dynamicPerc * 0.55, 'A4');
+    }
+
+    // 4. Santoor Plucked Glissandos (Measures 6, 12, 18, 24)
+    if (mIdx === 5 || mIdx === 11 || mIdx === 17 || mIdx === 23) {
+      const offset = stepInBar - 8;
+      const arpNotes = ['D5', 'E5', 'F#5', 'A5', 'D6'];
+      if (offset >= 0 && offset < arpNotes.length) {
+        this.playSantoorNote(time, arpNotes[offset], 0.38);
+      }
+    }
+  }
+
+  advanceStep() {
+    this.currentStep = (this.currentStep + 1) % this.totalSteps;
+    this.nextNoteTime += this.stepTime;
+  }
+
+  async start() {
+    if (this.isPlaying) return;
+    if (!this.engine.musicEnabled) return;
+
+    this.ensureAudioGraph();
+    if (!this.ctx) return;
+
+    if (this.ctx.state === 'suspended') {
+      try {
+        await this.ctx.resume();
+      } catch (_) {}
+    }
+
+    this.isPlaying = true;
+    this.currentStep = 0;
+    this.nextNoteTime = this.ctx.currentTime + 0.05;
+
+    if (this.bgmGain) {
+      const targetVol = this.engine.volume * 0.70;
+      this.bgmGain.gain.setValueAtTime(0.0001, this.ctx.currentTime);
+      this.bgmGain.gain.linearRampToValueAtTime(targetVol, this.ctx.currentTime + 0.4);
+    }
+
+    this.startTanpuraDrone();
+    this.scheduler();
+  }
+
+  stop() {
+    if (!this.isPlaying) return;
+    this.isPlaying = false;
+    if (this.timerID) {
+      clearTimeout(this.timerID);
+      this.timerID = null;
+    }
+
+    if (this.bgmGain && this.ctx) {
+      try {
+        const now = this.ctx.currentTime;
+        this.bgmGain.gain.setValueAtTime(this.bgmGain.gain.value, now);
+        this.bgmGain.gain.linearRampToValueAtTime(0.0001, now + 0.25);
+      } catch (_) {}
+    }
+
+    this.stopTanpuraDrone();
+  }
+
+  setVolume(vol) {
+    if (this.bgmGain && this.ctx) {
+      try {
+        const targetVol = (this.engine.musicEnabled && vol > 0) ? (vol * 0.70) : 0.0001;
+        this.bgmGain.gain.setValueAtTime(this.bgmGain.gain.value, this.ctx.currentTime);
+        this.bgmGain.gain.linearRampToValueAtTime(targetVol, this.ctx.currentTime + 0.1);
+      } catch (_) {}
+    }
+  }
+
+  setMode(newMode) {
+    if (this.mode === newMode) return;
+    this.mode = newMode;
+    if (newMode === 'race' || newMode === 'chapter3') {
+      this.tempo = 112;
+    } else if (newMode === 'temple' || newMode === 'chapter1') {
+      this.tempo = 104;
+    } else if (newMode === 'victory') {
+      this.tempo = 108;
+      if (this.ctx && this.isPlaying) {
+        this.playTempleBell(this.ctx.currentTime + 0.05, 1174.66, 0.85);
+      }
+    } else {
+      this.tempo = 108;
+    }
+    this.stepTime = (60 / this.tempo) / 4;
+  }
+}
+
+// ==========================================================================
+// 2. SOUND ENGINE (Coordinating Web Audio Synth + Audio Element Fallback)
+// ==========================================================================
 class SoundEngine {
   constructor() {
     this.ctx = null;
     this.masterGain = null;
-    this.droneGain = null;
-    this.isDronePlaying = false;
+    this.proceduralBgm = null;
+    this.bgmPlayer = null;
+    this.currentTrackType = 'gameplay';
 
     // Preferences with LocalStorage persistence
     this.soundEnabled = true;
     this.musicEnabled = true;
-    this.volume = 0.7; // Default 70%
-
-    // Dedicated audio tracks for all situations
-    this.trackUrls = {
-      menu: 'audio/menu-music.mp3',
-      chapter1: 'audio/divine-beginning.mp3',
-      chapter2: 'audio/sacred-challenge.mp3',
-      chapter3: 'audio/divine-race.mp3',
-      gameplay: 'audio/sacred-challenge.mp3',
-      race: 'audio/divine-race.mp3',
-      temple: 'audio/temple-music.mp3',
-      victory: 'audio/victory-music.mp3',
-      gameover: 'audio/game-over-music.mp3'
-    };
-
-    // Current playing background audio
-    this.currentTrackType = 'menu';
-    this.bgm = null;
-    this.currentAudio = null;
-    this.pendingTrack = 'menu';
+    this.volume = 0.80;
     this.isUnlocked = false;
 
     this.loadAudioPreferences();
+    this.initAudioElement();
   }
 
-  getBgmPlayer() {
-    if (!this.bgm) {
-      this.bgm = document.getElementById('bg-music-player');
-      if (!this.bgm) {
-        this.bgm = new Audio();
-        this.bgm.loop = true;
-      }
-      this.bgm.volume = this.volume;
-      this.currentAudio = this.bgm;
-    }
-    return this.bgm;
+  get sfxEnabled() {
+    return this.soundEnabled;
+  }
+
+  set sfxEnabled(v) {
+    this.soundEnabled = !!v;
   }
 
   loadAudioPreferences() {
+    this.musicEnabled = true;
+    this.soundEnabled = true;
+    this.volume = 0.80;
     try {
       const savedMusic = localStorage.getItem('ganesha_music_enabled');
       if (savedMusic !== null) this.musicEnabled = (savedMusic === 'true');
@@ -79,8 +637,36 @@ class SoundEngine {
       if (savedSound !== null) this.soundEnabled = (savedSound === 'true');
 
       const savedVol = localStorage.getItem('ganesha_audio_volume');
-      if (savedVol !== null) this.volume = Math.max(0, Math.min(1, parseFloat(savedVol)));
+      if (savedVol !== null) {
+        const v = parseFloat(savedVol);
+        if (!isNaN(v) && v >= 0) this.volume = Math.max(0.05, Math.min(1, v));
+      }
     } catch (_) {}
+  }
+
+  initAudioElement() {
+    // Support both ID conventions (bg-music-player and bgMusic)
+    let player = document.getElementById('bg-music-player') || document.getElementById('bgMusic');
+    if (!player) {
+      player = new Audio();
+      player.id = 'bg-music-player';
+      player.playsInline = true;
+      player.setAttribute('playsinline', '');
+      player.setAttribute('webkit-playsinline', '');
+      document.body.appendChild(player);
+    }
+    player.loop = true;
+    player.preload = 'auto';
+    player.volume = this.volume;
+
+    this.bgmPlayer = player;
+  }
+
+  getBgmPlayer() {
+    if (!this.bgmPlayer) {
+      this.initAudioElement();
+    }
+    return this.bgmPlayer;
   }
 
   init() {
@@ -96,6 +682,11 @@ class SoundEngine {
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume().catch(() => {});
     }
+
+    if (this.ctx && !this.proceduralBgm) {
+      this.proceduralBgm = new ProceduralBGM(this);
+    }
+
     this.isUnlocked = true;
     this.updateUI();
   }
@@ -103,82 +694,111 @@ class SoundEngine {
   unlock() {
     this.init();
     if (this.musicEnabled) {
-      const track = this.currentTrackType || this.pendingTrack || 'menu';
-      this.playTrack(track, false);
+      this.ensureMusicPlaying();
+    }
+  }
+
+  ensureMusicPlaying() {
+    this.init();
+    if (!this.musicEnabled) return;
+
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+
+    // Guarantee immediate background music via Procedural Web Audio Synthesizer
+    if (this.proceduralBgm && !this.proceduralBgm.isPlaying) {
+      this.proceduralBgm.start();
+    }
+
+    // Also attempt HTML5 audio element if an audio file is available
+    const player = this.getBgmPlayer();
+    if (player && player.paused) {
+      try {
+        const playPromise = player.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            // HTML5 player succeeded
+            if (this.proceduralBgm && this.proceduralBgm.isPlaying) {
+              this.proceduralBgm.setVolume(this.volume * 0.35);
+            }
+          }).catch(() => {
+            // HTML5 failed/404: Procedural synth keeps playing full volume!
+            if (this.proceduralBgm && this.proceduralBgm.isPlaying) {
+              this.proceduralBgm.setVolume(this.volume);
+            }
+          });
+        }
+      } catch (_) {}
+    }
+
+    this.updateUI();
+    const hint = document.getElementById('menu-tap-hint');
+    if (hint) {
+      hint.style.opacity = '0';
+      hint.style.pointerEvents = 'none';
     }
   }
 
   playTrack(type, forceRestart = false) {
-    const player = this.getBgmPlayer();
-
-    // If already playing this exact track type and not paused, do not cut off/restart!
-    if (!forceRestart && this.currentTrackType === type && !player.paused) {
-      return;
-    }
-
+    this.init();
     this.currentTrackType = type;
 
-    // If music is disabled, stop current audio and record intent
     if (!this.musicEnabled) {
       this.stopCurrentMusic();
       return;
     }
 
-    const url = this.trackUrls[type] || this.trackUrls.gameplay;
-    const isLooping = (type !== 'victory' && type !== 'gameover');
+    const player = this.getBgmPlayer();
 
-    try {
-      player.loop = isLooping;
-      player.volume = this.volume;
-
-      // Only update src if different, avoiding reload stutter
-      if (!player.src || !player.src.endsWith(url)) {
-        player.src = url;
+    if (type === 'gameover') {
+      if (player && !player.paused) {
+        player.volume = this.volume * 0.35;
       }
-
-      const playPromise = player.play();
-      if (playPromise !== undefined) {
-        playPromise.then(() => {
-          this.pendingTrack = null;
-          const hint = document.getElementById('menu-tap-hint');
-          if (hint) {
-            hint.style.opacity = '0';
-            hint.style.pointerEvents = 'none';
-          }
-        }).catch(() => {
-          // Autoplay was blocked on mobile until user gesture
-          this.pendingTrack = type;
-        });
+      if (this.proceduralBgm && this.proceduralBgm.isPlaying) {
+        this.proceduralBgm.setVolume(this.volume * 0.35);
       }
-
-      this.currentAudio = player;
-    } catch (e) {
-      console.warn("Could not play audio track:", e);
-      this.startAmbientDrone();
+      return;
     }
+
+    if (player) {
+      player.volume = this.volume;
+    }
+
+    // CONTINUOUS PLAYBACK REQUIREMENT ACROSS ALL 24 LEVELS:
+    // If music is already playing, DO NOT RESTART OR RESET CURRENT TIME!
+    if (!forceRestart) {
+      if (player && !player.paused && player.currentTime > 0) {
+        return;
+      }
+      if (this.proceduralBgm && this.proceduralBgm.isPlaying) {
+        this.proceduralBgm.setMode(type);
+        return;
+      }
+    }
+
+    this.ensureMusicPlaying();
   }
 
   stopCurrentMusic() {
-    if (this.bgm) {
-      try {
-        this.bgm.pause();
-        this.bgm.currentTime = 0;
-      } catch (_) {}
+    const player = this.getBgmPlayer();
+    if (player) {
+      try { player.pause(); } catch (_) {}
     }
-    if (this.isDronePlaying) {
-      this.stopAmbientDrone();
+    if (this.proceduralBgm) {
+      this.proceduralBgm.stop();
     }
   }
 
   toggleMusic() {
+    this.init();
     this.musicEnabled = !this.musicEnabled;
     try {
       localStorage.setItem('ganesha_music_enabled', this.musicEnabled);
     } catch (_) {}
 
     if (this.musicEnabled) {
-      const track = this.currentTrackType || this.pendingTrack || 'menu';
-      this.playTrack(track, true);
+      this.ensureMusicPlaying();
     } else {
       this.stopCurrentMusic();
     }
@@ -188,6 +808,7 @@ class SoundEngine {
   }
 
   toggleSound() {
+    this.init();
     this.soundEnabled = !this.soundEnabled;
     try {
       localStorage.setItem('ganesha_sfx_enabled', this.soundEnabled);
@@ -211,36 +832,90 @@ class SoundEngine {
       localStorage.setItem('ganesha_audio_volume', this.volume);
     } catch (_) {}
 
-    if (this.currentAudio) {
-      this.currentAudio.volume = this.volume;
+    const player = this.getBgmPlayer();
+    if (player) {
+      player.volume = this.volume;
     }
 
     if (this.masterGain && this.ctx) {
       this.masterGain.gain.setValueAtTime(this.soundEnabled ? this.volume : 0, this.ctx.currentTime);
     }
 
+    if (this.proceduralBgm) {
+      this.proceduralBgm.setVolume(this.volume);
+    }
+
     this.updateUI();
   }
 
   updateUI() {
-    // Sync HUD Music buttons
+    // 1. HUD Speaker Icon (🔊 ON / 🔇 OFF)
     const btnMusic = document.getElementById('btn-music');
-    if (btnMusic) btnMusic.textContent = this.musicEnabled ? '🎵' : '🔇';
+    if (btnMusic) {
+      btnMusic.textContent = this.musicEnabled ? '🔊' : '🔇';
+      btnMusic.title = this.musicEnabled ? 'Music: ON (Click to Mute)' : 'Music: OFF (Click to Play)';
+      btnMusic.setAttribute('aria-label', this.musicEnabled ? 'Music ON' : 'Music OFF');
+      if (this.musicEnabled) {
+        btnMusic.classList.add('music-active');
+        btnMusic.classList.remove('music-muted');
+      } else {
+        btnMusic.classList.add('music-muted');
+        btnMusic.classList.remove('music-active');
+      }
+    }
 
+    // 2. Mobile Touch Music Button
     const touchMusic = document.getElementById('touch-music');
-    if (touchMusic) touchMusic.textContent = this.musicEnabled ? '🎵' : '🔇';
+    if (touchMusic) {
+      touchMusic.textContent = this.musicEnabled ? '🔊' : '🔇';
+      touchMusic.title = this.musicEnabled ? 'Music: ON' : 'Music: OFF';
+    }
 
+    // 3. Main Menu Music Button
+    const btnMenuMusic = document.getElementById('btn-menu-music');
+    if (btnMenuMusic) {
+      btnMenuMusic.innerHTML = `<span id="menu-music-icon">${this.musicEnabled ? '🔊' : '🔇'}</span> Music: <span id="menu-music-status">${this.musicEnabled ? 'ON' : 'OFF'}</span>`;
+      btnMenuMusic.title = this.musicEnabled ? 'Music: ON (Click to Mute)' : 'Music: OFF (Click to Play)';
+    }
+
+    const menuMusicIcon = document.getElementById('menu-music-icon');
+    if (menuMusicIcon) {
+      menuMusicIcon.textContent = this.musicEnabled ? '🔊' : '🔇';
+    }
+
+    const menuMusicStatus = document.getElementById('menu-music-status');
+    if (menuMusicStatus) {
+      menuMusicStatus.textContent = this.musicEnabled ? 'ON' : 'OFF';
+    }
+
+    // 4. Pause Menu Music Button
+    const btnPauseMusic = document.getElementById('btn-pause-music');
+    if (btnPauseMusic) {
+      btnPauseMusic.innerHTML = `Music: <span id="pause-music-status">${this.musicEnabled ? '🔊 ON' : '🔇 OFF'}</span>`;
+    }
     const pauseMusicStatus = document.getElementById('pause-music-status');
-    if (pauseMusicStatus) pauseMusicStatus.textContent = this.musicEnabled ? 'ON 🎵' : 'OFF 🔇';
+    if (pauseMusicStatus) {
+      pauseMusicStatus.textContent = this.musicEnabled ? '🔊 ON' : '🔇 OFF';
+    }
 
-    // Sync HUD Sound buttons
+    // 5. Sound SFX Buttons
     const btnSound = document.getElementById('btn-sound');
-    if (btnSound) btnSound.textContent = this.soundEnabled ? '🔊' : '🔇';
+    if (btnSound) {
+      btnSound.textContent = this.soundEnabled ? '🔔' : '🔕';
+      btnSound.title = this.soundEnabled ? 'SFX: ON (Click to Mute)' : 'SFX: OFF (Click to Play)';
+    }
+
+    const btnMenuSound = document.getElementById('btn-menu-sound');
+    if (btnMenuSound) {
+      btnMenuSound.innerHTML = `🔔 SFX: <span id="menu-sound-status">${this.soundEnabled ? 'ON' : 'OFF'}</span>`;
+    }
 
     const pauseSoundStatus = document.getElementById('pause-sound-status');
-    if (pauseSoundStatus) pauseSoundStatus.textContent = this.soundEnabled ? 'ON 🔊' : 'OFF 🔇';
+    if (pauseSoundStatus) {
+      pauseSoundStatus.textContent = this.soundEnabled ? '🔔 ON' : '🔕 OFF';
+    }
 
-    // Sync volume sliders
+    // 6. Volume Sliders
     const pct = Math.round(this.volume * 100);
     const volSlider = document.getElementById('volume-slider');
     if (volSlider) volSlider.value = pct;
@@ -251,43 +926,6 @@ class SoundEngine {
     const volDisplay = document.getElementById('volume-val-display');
     if (volDisplay) volDisplay.textContent = `${pct}%`;
   }
-
-  startAmbientDrone() {
-    if (!this.ctx || this.isDronePlaying) return;
-    try {
-      const osc = this.ctx.createOscillator();
-      const osc2 = this.ctx.createOscillator();
-      this.droneGain = this.ctx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(136.1, this.ctx.currentTime);
-
-      osc2.type = 'triangle';
-      osc2.frequency.setValueAtTime(204.15, this.ctx.currentTime);
-
-      this.droneGain.gain.setValueAtTime((this.soundEnabled && this.musicEnabled) ? 0.03 * this.volume : 0, this.ctx.currentTime);
-
-      osc.connect(this.droneGain);
-      osc2.connect(this.droneGain);
-      this.droneGain.connect(this.masterGain || this.ctx.destination);
-
-      osc.start();
-      osc2.start();
-      this.isDronePlaying = true;
-    } catch (e) {
-      console.warn("Audio drone couldn't start automatically:", e);
-    }
-  }
-
-  stopAmbientDrone() {
-    if (this.droneGain && this.ctx) {
-      try {
-        this.droneGain.gain.setValueAtTime(0, this.ctx.currentTime);
-      } catch (_) {}
-    }
-    this.isDronePlaying = false;
-  }
-
   playJump() {
     if (!this.soundEnabled || !this.ctx) return;
     const osc = this.ctx.createOscillator();
@@ -431,6 +1069,43 @@ class SoundEngine {
     });
   }
 
+  playItemCollect() {
+    this.playCollect();
+  }
+
+  playCoin() {
+    if (!this.soundEnabled || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    [987.77, 1318.51].forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+      gain.gain.setValueAtTime(0.16, now + idx * 0.07);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28 + idx * 0.07);
+      osc.connect(gain);
+      gain.connect(this.masterGain || this.ctx.destination);
+      osc.start(now + idx * 0.07);
+      osc.stop(now + 0.32 + idx * 0.07);
+    });
+  }
+
+  playClick() {
+    if (!this.soundEnabled || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.exponentialRampToValueAtTime(300, now + 0.04);
+    gain.gain.setValueAtTime(0.08, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+    osc.connect(gain);
+    gain.connect(this.masterGain || this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.05);
+  }
+
   playVictory() {
     if (!this.soundEnabled || !this.ctx) return;
     const notes = [440, 554.37, 659.25, 880, 1108.73];
@@ -448,9 +1123,101 @@ class SoundEngine {
       osc.stop(now + 1.2);
     });
   }
+
+  playTempleBell(baseFreq = 880) {
+    if (!this.soundEnabled || !this.ctx) return;
+    if (this.bgm && typeof this.bgm.playTempleBell === 'function') {
+      this.bgm.playTempleBell(this.ctx.currentTime, baseFreq, 0.85);
+      return;
+    }
+    const now = this.ctx.currentTime;
+    [1.0, 2.76, 5.4].forEach((ratio, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(baseFreq * ratio, now);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.2 / (idx + 1), now + 0.004);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.5 - idx * 0.3);
+      osc.connect(gain);
+      gain.connect(this.masterGain || this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 1.6);
+    });
+  }
+
+  playWaterSplash() {
+    if (!this.soundEnabled || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(320, now);
+    osc.frequency.exponentialRampToValueAtTime(100, now + 0.25);
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(600, now);
+    filter.frequency.linearRampToValueAtTime(180, now + 0.25);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain || this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.26);
+  }
+
+  playKeyUnlock() {
+    if (!this.soundEnabled || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(f, now + i * 0.05);
+      gain.gain.setValueAtTime(0.15, now + i * 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4 + i * 0.05);
+      osc.connect(gain);
+      gain.connect(this.masterGain || this.ctx.destination);
+      osc.start(now + i * 0.05);
+      osc.stop(now + 0.5);
+    });
+  }
+
+  playGameOver() {
+    if (!this.soundEnabled || !this.ctx) return;
+    const notes = [440, 415.3, 392, 349.23];
+    const now = this.ctx.currentTime;
+    notes.forEach((f, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f, now + i * 0.16);
+      gain.gain.setValueAtTime(0.16, now + i * 0.16);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7 + i * 0.16);
+      osc.connect(gain);
+      gain.connect(this.masterGain || this.ctx.destination);
+      osc.start(now + i * 0.16);
+      osc.stop(now + 1.2);
+    });
+  }
 }
 
 const sounds = new SoundEngine();
+window.sounds = sounds;
+
+// First interaction audio unlock (Desktop click / Mobile tap)
+const unlockContinuousMusic = () => {
+  if (sounds) {
+    sounds.init();
+    if (sounds.musicEnabled) {
+      sounds.ensureMusicPlaying();
+    }
+  }
+};
+['click', 'touchstart', 'pointerdown', 'keydown'].forEach(evt => {
+  window.addEventListener(evt, unlockContinuousMusic, { passive: true });
+});
 
 // ==========================================================================
 // 2. INPUT HANDLER (Keyboard + Mobile Touch including 'L')
@@ -501,7 +1268,8 @@ class InputHandler {
           sounds.toggleMusic();
           break;
         case 'p':
-          game.togglePause();
+        case 'escape':
+          if (typeof game !== 'undefined' && game) game.togglePause();
           break;
       }
     });
@@ -555,6 +1323,7 @@ class InputHandler {
         sounds.init();
         this.keys[key] = true;
         el.classList.add('is-pressed');
+        if (typeof game !== 'undefined' && game) game.triggerVibrate(15);
       };
 
       const onRelease = (e) => {
@@ -667,6 +1436,19 @@ class ParticleSystem {
     });
   }
 
+  emitFloatingText(x, y, text, color = '#ffd700', size = 14) {
+    this.particles.push({
+      x: x, y: y, text: text,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: -1.3,
+      size: size,
+      alpha: 1,
+      decay: 0.018,
+      color: color,
+      type: 'text'
+    });
+  }
+
   update() {
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
@@ -679,6 +1461,9 @@ class ParticleSystem {
         p.y += p.vy; p.rotation += p.rotSpeed;
       } else if (p.type === 'ring') {
         p.radius += p.growth;
+      } else if (p.type === 'text') {
+        p.x += p.vx;
+        p.y += p.vy;
       }
 
       if (p.alpha <= 0 || (p.type === 'ring' && p.radius >= p.maxRadius)) {
@@ -713,6 +1498,13 @@ class ParticleSystem {
         ctx.beginPath();
         ctx.arc(screenX, p.y, p.radius, 0, Math.PI * 2);
         ctx.stroke();
+      } else if (p.type === 'text') {
+        ctx.font = `bold ${p.size}px 'Philosopher', sans-serif`;
+        ctx.fillStyle = p.color;
+        ctx.textAlign = 'center';
+        ctx.shadowColor = 'rgba(0,0,0,0.85)';
+        ctx.shadowBlur = 4;
+        ctx.fillText(p.text, screenX, p.y);
       }
     }
     ctx.restore();
@@ -1000,6 +1792,7 @@ class Player {
     this.attackTimer = 0;
     this.attackDuration = 18;
     this.hasHitCurrentAttack = false;
+    this.hitEnemiesThisSwing = new Set();
     this.attackHitbox = { x: 0, y: 0, width: 46, height: 46 };
 
     this.skillCooldown = 0;
@@ -1048,6 +1841,7 @@ class Player {
       this.isAttacking = true;
       this.attackTimer = this.attackDuration;
       this.hasHitCurrentAttack = false;
+      this.hitEnemiesThisSwing = new Set();
       sounds.playAttack();
     }
 
@@ -1071,7 +1865,7 @@ class Player {
       game.triggerDivineShockwave(this.x + this.width / 2, this.y + this.height / 2, 125);
     }
 
-    // New Divine Attack: Vakratunda Trunk Blast ('L')
+    // Divine Attack: Vakratunda Trunk Blast ('L')
     if (input.keys.beam && this.skillCooldown <= 0 && this.energy >= 40) {
       this.energy -= 40;
       this.skillCooldown = 50;
@@ -1090,10 +1884,15 @@ class Player {
     this.isGrounded = false;
     this.checkVerticalCollisions(platforms);
 
+    // Ride with moving platform if standing on one
+    if (this.isGrounded && this.standingPlatform && this.standingPlatform.isMovingPlatform) {
+      this.x += this.standingPlatform.dx;
+      this.y += this.standingPlatform.dy;
+    }
+
     if (this.x < 0) this.x = 0;
-    if (this.y > 600) {
-      this.takeDamage(35);
-      game.respawnPlayer();
+    if (this.y > 640) {
+      game.loseLife("Fall into Abyss");
     }
   }
 
@@ -1110,6 +1909,7 @@ class Player {
   }
 
   checkVerticalCollisions(platforms) {
+    this.standingPlatform = null;
     for (const plat of platforms) {
       if (plat.isOpen) continue;
       const box = plat.getCollisionBox ? plat.getCollisionBox() : plat;
@@ -1118,6 +1918,7 @@ class Player {
           this.y = box.y - this.height;
           this.vy = 0;
           this.isGrounded = true;
+          this.standingPlatform = plat;
         } else if (this.vy < 0) {
           this.y = box.y + box.height;
           this.vy = 0;
@@ -1135,15 +1936,11 @@ class Player {
     );
   }
 
-  takeDamage(amt) {
+  takeDamage(amt = 1) {
     if (this.invulnerableTimer > 0) return;
-    this.health = Math.max(0, this.health - amt);
-    this.invulnerableTimer = 35;
-    sounds.playHit();
-    game.particles.emitSparks(this.x + this.width / 2, this.y + this.height / 2, 8, '#ff5252');
-    if (this.health <= 0) {
-      game.onPlayerDefeated();
-    }
+    this.health = Math.max(0, this.health - 25);
+    this.invulnerableTimer = 45;
+    game.loseLife("Obstacle");
   }
 
   draw(ctx, cameraX) {
@@ -1154,17 +1951,20 @@ class Player {
     ctx.translate(screenX + this.width / 2, this.y + this.height / 2);
     if (this.facing === -1) ctx.scale(-1, 1);
 
-    const isChapter2Or3 = game && game.currentLevelIndex >= 8;
     const isRide = game && (game.currentLevelIndex === 10 || game.currentLevelIndex === 17 || game.currentLevelIndex === 22);
 
-    // Divine Aura
+    // Divine Golden Aura Ring
+    const auraPulse = Math.sin(Date.now() * 0.005) * 3;
     ctx.beginPath();
-    ctx.arc(0, 0, 34, 0, Math.PI * 2);
-    ctx.fillStyle = this.boostTimer > 0 ? 'rgba(0, 229, 255, 0.35)' : 'rgba(255, 215, 0, 0.18)';
+    ctx.arc(0, -4, 34 + auraPulse, 0, Math.PI * 2);
+    ctx.fillStyle = this.boostTimer > 0 ? 'rgba(0, 229, 255, 0.35)' : 'rgba(255, 215, 0, 0.22)';
     ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 215, 0, 0.45)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
 
     if (isRide) {
-      // Mushika the Mouse Vahana
+      // Mushika the Divine Mouse Vahana
       ctx.save();
       ctx.translate(0, 16);
       ctx.fillStyle = '#90a4ae';
@@ -1189,130 +1989,220 @@ class Player {
       ctx.restore();
     }
 
-    if (isChapter2Or3) {
-      // Lord Ganesha Sprite
-      const legOffset = Math.sin(this.walkCycle) * 4;
-      ctx.fillStyle = '#ffd54f';
-      ctx.beginPath();
-      ctx.arc(0, 10, 16, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#ffb300';
-      ctx.fillRect(-10, 14, 9, 16 + (this.isGrounded ? legOffset : 0));
-      ctx.fillRect(1, 14, 9, 16 - (this.isGrounded ? legOffset : 0));
+    // =========================================================================
+    // CUTE, HEROIC & FRIENDLY LORD GANESHA SPRITE (CONSISTENT ALL 24 LEVELS)
+    // =========================================================================
+    const legOffset = this.isGrounded ? Math.sin(this.walkCycle) * 5 : 0;
+    const idleBob = Math.sin(Date.now() * 0.004) * 1.5;
 
-      // Head & Countenance
-      ctx.fillStyle = '#ffe082';
-      ctx.beginPath();
-      ctx.arc(0, -10, 15, 0, Math.PI * 2);
-      ctx.fill();
+    // Plump Tummy (Lambodara)
+    ctx.fillStyle = '#ffd54f';
+    ctx.beginPath();
+    ctx.arc(0, 10 + idleBob, 17, 0, Math.PI * 2);
+    ctx.fill();
 
-      // Ears
-      ctx.beginPath();
-      ctx.ellipse(-16, -10, 8, 12, -0.2, 0, Math.PI * 2);
-      ctx.ellipse(16, -10, 8, 12, 0.2, 0, Math.PI * 2);
-      ctx.fill();
+    // Sacred Silk Pitambara Dhoti (Golden-Orange)
+    ctx.fillStyle = '#ff9800';
+    ctx.beginPath();
+    ctx.moveTo(-12, 12 + idleBob);
+    ctx.lineTo(12, 12 + idleBob);
+    ctx.lineTo(14, 25 + idleBob);
+    ctx.lineTo(-14, 25 + idleBob);
+    ctx.closePath();
+    ctx.fill();
 
-      // Trunk & Modak
-      ctx.strokeStyle = '#ffe082';
-      ctx.lineWidth = 6;
-      ctx.lineCap = 'round';
+    // Golden Dhoti Hem & Sash
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(-14, 23 + idleBob, 28, 3);
+    ctx.fillRect(-2, 12 + idleBob, 4, 14);
+
+    // Feet / Lotus Steps
+    ctx.fillStyle = '#ffb300';
+    ctx.beginPath();
+    ctx.ellipse(-8, 26 + (this.isGrounded ? legOffset : -3) + idleBob, 6, 4, 0, 0, Math.PI * 2);
+    ctx.ellipse(8, 26 - (this.isGrounded ? legOffset : 3) + idleBob, 6, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Cute Round Head
+    ctx.fillStyle = '#ffe082';
+    ctx.beginPath();
+    ctx.arc(0, -9 + idleBob, 16, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Rosy Cute Cheeks
+    ctx.fillStyle = 'rgba(255, 128, 171, 0.45)';
+    ctx.beginPath();
+    ctx.arc(-9, -6 + idleBob, 4, 0, Math.PI * 2);
+    ctx.arc(9, -6 + idleBob, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Large Elephant Ears (Animated Flapping)
+    const earFlap = Math.sin(this.walkCycle * 0.8) * 0.15;
+    ctx.save();
+    // Left Ear
+    ctx.fillStyle = '#ffe082';
+    ctx.beginPath();
+    ctx.ellipse(-17, -10 + idleBob, 9, 13, -0.25 + earFlap, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f8bbd0';
+    ctx.beginPath();
+    ctx.ellipse(-17, -10 + idleBob, 6, 9, -0.25 + earFlap, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Right Ear
+    ctx.fillStyle = '#ffe082';
+    ctx.beginPath();
+    ctx.ellipse(17, -10 + idleBob, 9, 13, 0.25 - earFlap, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f8bbd0';
+    ctx.beginPath();
+    ctx.ellipse(17, -10 + idleBob, 6, 9, 0.25 - earFlap, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Cute Expressive Eyes with Blink Cycle
+    const isBlinking = (Math.floor(Date.now() / 3200) % 20 === 0 && Math.floor(Date.now() / 120) % 2 === 0);
+    if (isBlinking) {
+      ctx.strokeStyle = '#3e2723';
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(0, -5);
-      ctx.quadraticCurveTo(8, 8, 14, 2);
+      ctx.moveTo(-7, -11 + idleBob);
+      ctx.lineTo(-3, -11 + idleBob);
+      ctx.moveTo(3, -11 + idleBob);
+      ctx.lineTo(7, -11 + idleBob);
       ctx.stroke();
-      ctx.fillStyle = '#ffd700';
-      ctx.beginPath();
-      ctx.arc(14, 0, 4, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Golden Mukuta Crown
-      ctx.fillStyle = '#ffd700';
-      ctx.beginPath();
-      ctx.moveTo(-12, -22);
-      ctx.lineTo(0, -38);
-      ctx.lineTo(12, -22);
-      ctx.fill();
-      ctx.fillStyle = '#ff1744';
-      ctx.beginPath();
-      ctx.arc(0, -26, 3, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Battle Axe (Parashu)
-      ctx.save();
-      const swing = this.isAttacking ? (this.attackTimer / this.attackDuration) * 1.5 - 0.75 : 0.2;
-      ctx.rotate(swing);
-      ctx.strokeStyle = '#795548';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(10, 14);
-      ctx.lineTo(16, -24);
-      ctx.stroke();
-      ctx.fillStyle = '#ffd700';
-      ctx.beginPath();
-      ctx.arc(18, -20, 9, -Math.PI / 2, Math.PI / 2);
-      ctx.fill();
-      ctx.restore();
-
     } else {
-      // Young Guardian (Chapter 1)
-      const legOffset = Math.sin(this.walkCycle) * 5;
-      ctx.fillStyle = '#ffb300';
-      ctx.fillRect(-10, 6, 9, 22 + (this.isGrounded ? legOffset : 0));
-      ctx.fillRect(1, 6, 9, 22 - (this.isGrounded ? legOffset : 0));
-
-      ctx.fillStyle = '#ffcc80';
-      ctx.fillRect(-9, -12, 18, 20);
-
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1.5;
+      ctx.fillStyle = '#3e2723';
       ctx.beginPath();
-      ctx.moveTo(-7, -12);
-      ctx.lineTo(8, 6);
-      ctx.stroke();
-
-      ctx.fillStyle = '#d84315';
-      ctx.fillRect(-9, 4, 18, 5);
-
-      ctx.fillStyle = '#ffcc80';
-      ctx.beginPath();
-      ctx.arc(0, -20, 11, 0, Math.PI * 2);
+      ctx.arc(-5, -11 + idleBob, 2.5, 0, Math.PI * 2);
+      ctx.arc(5, -11 + idleBob, 2.5, 0, Math.PI * 2);
       ctx.fill();
-
-      ctx.fillStyle = '#ff1744';
-      ctx.fillRect(1, -25, 3, 5);
-      ctx.fillStyle = '#ffd700';
-      ctx.fillRect(-2, -23, 7, 2);
-
-      ctx.fillStyle = '#ffd700';
+      ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.moveTo(-6, -30);
-      ctx.lineTo(0, -36);
-      ctx.lineTo(6, -30);
+      ctx.arc(-5.8, -12 + idleBob, 1, 0, Math.PI * 2);
+      ctx.arc(4.2, -12 + idleBob, 1, 0, Math.PI * 2);
       ctx.fill();
-
-      // Lotus Staff
-      ctx.save();
-      const staffSwingAngle = this.isAttacking ? (this.attackTimer / this.attackDuration) * 1.5 - 0.75 : 0.2;
-      ctx.rotate(staffSwingAngle);
-      ctx.strokeStyle = '#8d6e63';
-      ctx.lineWidth = 3.5;
-      ctx.beginPath();
-      ctx.moveTo(8, 16);
-      ctx.lineTo(14, -28);
-      ctx.stroke();
-      ctx.fillStyle = '#f48fb1';
-      ctx.beginPath();
-      ctx.arc(14, -30, 6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
     }
 
+    // Sacred Sandalwood Tilak & Trishul
+    ctx.fillStyle = '#d50000';
+    ctx.beginPath();
+    ctx.arc(0, -17 + idleBob, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(-3, -15 + idleBob, 6, 1.5);
+    ctx.fillRect(-1, -19 + idleBob, 2, 5);
+
+    // Tusks: Ekadanta (Broken right tusk with gold band) & Left complete tusk
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#ffb300';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(4, -3 + idleBob);
+    ctx.lineTo(9, 2 + idleBob);
+    ctx.lineTo(7, 3 + idleBob);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(-4, -3 + idleBob);
+    ctx.lineTo(-8, 0 + idleBob);
+    ctx.lineTo(-6, 1 + idleBob);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(-8, -1 + idleBob, 3, 2);
+
+    // Elephant Trunk & Golden Modak
+    const trunkSway = Math.sin(this.walkCycle * 0.7) * 4;
+    const trunkLift = this.isGrounded ? 0 : -6;
+    ctx.strokeStyle = '#ffe082';
+    ctx.lineWidth = 6.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, -5 + idleBob);
+    ctx.quadraticCurveTo(6 + trunkSway, 6 + trunkLift + idleBob, 14 + trunkSway, 1 + trunkLift + idleBob);
+    ctx.stroke();
+
+    // Modak in Trunk Tip
+    ctx.fillStyle = '#ffd54f';
+    ctx.strokeStyle = '#ff6f00';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    const mx = 14 + trunkSway;
+    const my = -1 + trunkLift + idleBob;
+    ctx.moveTo(mx, my - 6);
+    ctx.quadraticCurveTo(mx + 6, my + 4, mx, my + 6);
+    ctx.quadraticCurveTo(mx - 6, my + 4, mx, my - 6);
+    ctx.fill();
+    ctx.stroke();
+
+    // Royal Golden Mukut (Crown) with Ruby
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    ctx.moveTo(-13, -22 + idleBob);
+    ctx.lineTo(-8, -34 + idleBob);
+    ctx.lineTo(0, -42 + idleBob);
+    ctx.lineTo(8, -34 + idleBob);
+    ctx.lineTo(13, -22 + idleBob);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#ff8f00';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#d50000';
+    ctx.beginPath();
+    ctx.arc(0, -28 + idleBob, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(-1, -29 + idleBob, 1, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Golden Jewellery (Necklace & Armlets)
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 5 + idleBob, 10, 0.2, Math.PI - 0.2);
+    ctx.stroke();
+
+    // Sacred Weapon: Staff / Battle Axe
+    ctx.save();
+    const swing = this.isAttacking ? (this.attackTimer / this.attackDuration) * 1.6 - 0.8 : 0.25;
+    ctx.rotate(swing);
+    ctx.strokeStyle = '#795548';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(10, 12 + idleBob);
+    ctx.lineTo(17, -26 + idleBob);
+    ctx.stroke();
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    ctx.arc(19, -22 + idleBob, 10, -Math.PI / 2, Math.PI / 2);
+    ctx.fill();
+    ctx.strokeStyle = '#ff6f00';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+
     if (this.isAttacking) {
-      ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)';
-      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(255, 215, 0, 0.85)';
+      ctx.lineWidth = 5;
       ctx.beginPath();
-      ctx.arc(14, 0, 36, -0.6, 0.8);
+      ctx.arc(16, 0 + idleBob, 38, -0.7, 0.9);
       ctx.stroke();
+    }
+
+    if (this.isCelebrating) {
+      ctx.save();
+      ctx.fillStyle = '#ffd700';
+      ctx.font = '16px serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('✨ ॐ ✨', 0, -50);
+      ctx.restore();
     }
 
     ctx.restore();
@@ -1574,10 +2464,12 @@ class WisdomSymbol {
 
 // --- ENEMY CLASS ---
 class Enemy {
-  constructor(x, y, type = 'wisp') {
+  constructor(x, y, type = 'asura_grunt', patrolMinX = null, patrolMaxX = null) {
     this.x = x;
     this.y = y;
     this.type = type;
+    this.patrolMinX = patrolMinX;
+    this.patrolMaxX = patrolMaxX;
     this.width = 34;
     this.height = 42;
     this.vx = -1.2;
@@ -1589,63 +2481,134 @@ class Enemy {
     this.hitTimer = 0;
     this.attackCooldown = 0;
     this.damage = 12;
+    this.facing = -1;
+    this.animTimer = Math.random() * 100;
 
-    if (type === 'wisp') {
+    // Archetype stats & dimensions
+    if (type === 'asura_grunt') {
+      this.maxHealth = 25; this.health = 25; this.damage = 8;
+      this.width = 32; this.height = 42; this.vx = -0.9;
+    } else if (type === 'asura_scout') {
+      this.maxHealth = 32; this.health = 32; this.damage = 10;
+      this.width = 34; this.height = 44; this.vx = -1.2;
+    } else if (type === 'asura_patrol') {
+      this.maxHealth = 38; this.health = 38; this.damage = 12;
+      this.width = 36; this.height = 46; this.vx = -1.4;
+    } else if (type === 'shadow_beast') {
+      this.maxHealth = 30; this.health = 30; this.damage = 15;
+      this.width = 40; this.height = 28; this.vx = -1.5;
+    } else if (type === 'corrupted_wisp') {
+      this.maxHealth = 24; this.health = 24; this.damage = 10;
+      this.width = 28; this.height = 28; this.vx = -1.4;
+    } else if (type === 'armored_asura') {
+      this.maxHealth = 80; this.health = 80; this.damage = 18;
+      this.width = 42; this.height = 52; this.vx = -0.85;
+    } else if (type === 'dark_sorcerer') {
+      this.maxHealth = 55; this.health = 55; this.damage = 16;
+      this.width = 34; this.height = 48; this.vx = -1.0;
+    } else if (type === 'wisp') {
       this.maxHealth = 20; this.health = 20; this.damage = 8; this.width = 28; this.height = 28;
-    } else if (type === 'raider') {
+    } else if (type === 'raider' || type === 'corrupted_asura') {
       this.maxHealth = 35; this.health = 35; this.damage = 14; this.vx = -1.5;
     } else if (type === 'gana') {
       this.maxHealth = 45; this.health = 45; this.damage = 16; this.width = 38; this.height = 48;
-    } else if (type === 'miniboss') {
-      this.maxHealth = 130; this.health = 130; this.damage = 22; this.width = 52; this.height = 64; this.vx = -1.0;
-    } else if (type === 'corrupted_asura') {
-      this.maxHealth = 42; this.health = 42; this.damage = 16; this.vx = -1.8;
-    } else if (type === 'shadow_beast') {
-      this.maxHealth = 30; this.health = 30; this.damage = 14; this.vx = -2.2;
-    } else if (type === 'asura_chieftain') {
-      this.maxHealth = 170; this.health = 170; this.damage = 24; this.width = 54; this.height = 66; this.vx = -1.0;
+    } else if (type === 'miniboss' || type === 'asura_chieftain') {
+      this.maxHealth = 150; this.health = 150; this.damage = 22; this.width = 52; this.height = 64; this.vx = -1.0;
     } else if (type === 'temple_golem') {
       this.maxHealth = 140; this.health = 140; this.damage = 20; this.width = 48; this.height = 60; this.vx = -0.9;
-    } else if (type === 'dark_sorcerer') {
-      this.maxHealth = 50; this.health = 50; this.damage = 18; this.vx = -1.2;
     }
   }
 
   update(player, platforms, particles) {
     if (!this.isAlive) return;
+    this.animTimer++;
     if (this.hitTimer > 0) this.hitTimer--;
     if (this.attackCooldown > 0) this.attackCooldown--;
 
     const distToPlayer = player.x - this.x;
-    if (Math.abs(distToPlayer) < 340) {
-      this.vx = distToPlayer > 0 ? 1.4 : -1.4;
-      if (this.type === 'miniboss' || this.type === 'asura_chieftain') this.vx *= 0.8;
-      if (this.type === 'shadow_beast') this.vx *= 1.4;
-    }
+    const absDist = Math.abs(distToPlayer);
 
-    if (this.type === 'dark_sorcerer' && this.attackCooldown <= 0 && Math.abs(distToPlayer) < 280) {
-      this.attackCooldown = 130;
-      game.spawnShockwave(this.x + (distToPlayer > 0 ? this.width : -20), this.y + 15, distToPlayer > 0 ? 4 : -4);
-    }
+    // 1. Movement & AI Behaviors
+    if (this.type === 'corrupted_wisp' || this.type === 'wisp') {
+      // Sinuous flying wisp
+      this.x += this.vx;
+      this.y += Math.sin(this.animTimer * 0.05 + this.x * 0.01) * 1.5;
+      if (absDist < 260 && player.y > this.y) {
+        this.y += 0.8; // Gently swoop down toward player
+      }
+      if (this.patrolMinX !== null && this.x <= this.patrolMinX) this.vx = Math.abs(this.vx);
+      if (this.patrolMaxX !== null && this.x >= this.patrolMaxX) this.vx = -Math.abs(this.vx);
+    } else {
+      // Ground Enemies
+      if (this.type === 'shadow_beast') {
+        // High speed predatory sprint when near player
+        if (absDist < 340) {
+          const runDir = distToPlayer > 0 ? 1 : -1;
+          this.vx = runDir * 2.5;
+          this.facing = runDir;
+        } else if (this.patrolMinX !== null && this.patrolMaxX !== null) {
+          if (this.x <= this.patrolMinX) this.vx = 1.3;
+          if (this.x >= this.patrolMaxX) this.vx = -1.3;
+        }
+      } else if (this.type === 'dark_sorcerer') {
+        // Keeps tactical distance and fires ranged shockwaves
+        if (absDist < 140) {
+          this.vx = distToPlayer > 0 ? -1.2 : 1.2; // Back away if too close
+        } else if (absDist < 360) {
+          this.vx = 0; // Hold ground and cast
+          this.facing = distToPlayer > 0 ? 1 : -1;
+          if (this.attackCooldown <= 0) {
+            this.attackCooldown = 110;
+            game.spawnShockwave(this.x + (distToPlayer > 0 ? this.width : -20), this.y + 15, distToPlayer > 0 ? 4.5 : -4.5);
+            sounds.playHit();
+            particles.emitSparks(this.x + this.width / 2, this.y + 15, 8, '#ab47bc');
+          }
+        } else {
+          if (this.patrolMinX !== null && this.patrolMaxX !== null) {
+            if (this.x <= this.patrolMinX) this.vx = 0.9;
+            if (this.x >= this.patrolMaxX) this.vx = -0.9;
+          }
+        }
+      } else if (this.type === 'asura_patrol') {
+        // Dedicated platform patrolling with boundary reversals
+        if (this.patrolMinX !== null && this.x <= this.patrolMinX) {
+          this.vx = Math.abs(this.vx || 1.4);
+        } else if (this.patrolMaxX !== null && this.x >= this.patrolMaxX) {
+          this.vx = -Math.abs(this.vx || 1.4);
+        } else if (absDist < 200 && Math.abs(player.y - this.y) < 40) {
+          // Alert: speed up towards player on the same platform
+          this.vx = (distToPlayer > 0 ? 1 : -1) * 1.8;
+        }
+      } else {
+        // asura_grunt, asura_scout, armored_asura
+        if (absDist < 300) {
+          const spd = this.type === 'armored_asura' ? 0.9 : (this.type === 'asura_scout' ? 1.3 : 0.9);
+          this.vx = (distToPlayer > 0 ? 1 : -1) * spd;
+        } else if (this.patrolMinX !== null && this.patrolMaxX !== null) {
+          if (this.x <= this.patrolMinX) this.vx = Math.abs(this.vx);
+          if (this.x >= this.patrolMaxX) this.vx = -Math.abs(this.vx);
+        }
+      }
 
-    if (this.type !== 'wisp') {
+      this.facing = this.vx > 0 ? 1 : -1;
+
+      // Gravity & Platform Collisions
       this.vy += 0.5;
       if (this.vy > 12) this.vy = 12;
       this.x += this.vx;
       this.checkHorizontalCollisions(platforms);
       this.y += this.vy;
       this.checkVerticalCollisions(platforms);
-    } else {
-      this.x += this.vx;
-      this.y += Math.sin(Date.now() * 0.005 + this.x) * 1.2;
     }
 
+    // 2. Player Touch Damage
     if (this.collidesWith(player) && this.attackCooldown <= 0) {
       player.takeDamage(this.damage);
       this.attackCooldown = 40;
+      particles.emitSparks(player.x + player.width / 2, player.y + player.height / 2, 8, '#ff1744');
     }
 
-    if (game.defenseTarget && this.collidesWith(game.defenseTarget) && this.attackCooldown <= 0) {
+    if (game && game.defenseTarget && this.collidesWith(game.defenseTarget) && this.attackCooldown <= 0) {
       game.defenseTarget.takeDamage(10, particles);
       this.attackCooldown = 45;
     }
@@ -1678,15 +2641,18 @@ class Enemy {
   }
 
   takeHit(damage, particles) {
+    if (this.type === 'armored_asura') {
+      damage = Math.max(12, Math.floor(damage * 0.75));
+    }
     this.health -= damage;
     this.hitTimer = 10;
     sounds.playHit();
-    particles.emitSparks(this.x + this.width / 2, this.y + this.height / 2, 8, '#ffd700');
+    particles.emitSparks(this.x + this.width / 2, this.y + this.height / 2, 10, '#ffd700');
 
     if (this.health <= 0) {
       this.isAlive = false;
-      particles.emitLotusPetals(this.x + this.width / 2, this.y + this.height / 2, 8);
-      particles.emitSparks(this.x + this.width / 2, this.y + this.height / 2, 14, '#ffd700');
+      particles.emitLotusPetals(this.x + this.width / 2, this.y + this.height / 2, 10);
+      particles.emitSparks(this.x + this.width / 2, this.y + this.height / 2, 18, '#ff9800');
       game.onEnemyDefeated(this);
     }
   }
@@ -1708,65 +2674,325 @@ class Enemy {
     ctx.translate(screenX + this.width / 2, this.y + this.height / 2);
     if (this.hitTimer > 0) ctx.filter = 'brightness(2.5)';
 
-    if (this.type === 'wisp') {
+    if (this.type === 'corrupted_wisp' || this.type === 'wisp') {
+      // Glowing ethereal wisp with pulsing core
+      const glowCol = this.type === 'corrupted_wisp' ? '#e040fb' : '#00e5ff';
       ctx.beginPath();
-      ctx.arc(0, 0, 14, 0, Math.PI * 2);
-      ctx.fillStyle = '#00e5ff';
-      ctx.shadowColor = '#00e5ff';
-      ctx.shadowBlur = 15;
+      ctx.arc(0, 0, 13, 0, Math.PI * 2);
+      ctx.fillStyle = glowCol;
+      ctx.shadowColor = glowCol;
+      ctx.shadowBlur = 16;
       ctx.fill();
-    } else if (this.type === 'raider' || this.type === 'corrupted_asura') {
-      ctx.fillStyle = this.type === 'corrupted_asura' ? '#4a148c' : '#311b92';
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(0, 0, 5, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (this.type === 'asura_grunt') {
+      // Crimson Imp Grunt with tusks
+      ctx.fillStyle = '#b71c1c';
+      ctx.fillRect(-10, -16, 20, 32);
+      ctx.fillStyle = '#ffd700'; // Eyes
+      ctx.fillRect(this.facing > 0 ? 0 : -6, -10, 4, 3);
+      ctx.fillStyle = '#fff'; // Tusks
+      ctx.fillRect(this.facing > 0 ? 2 : -8, -4, 3, 5);
+      // Club
+      ctx.fillStyle = '#5d4037';
+      ctx.fillRect(this.facing > 0 ? 10 : -14, -8, 4, 20);
+    } else if (this.type === 'asura_scout' || this.type === 'raider' || this.type === 'corrupted_asura') {
+      // Dark Indigo Scout with red bandana
+      ctx.fillStyle = '#283593';
       ctx.fillRect(-12, -18, 24, 36);
       ctx.fillStyle = '#ff1744';
-      ctx.fillRect(-6, -10, 4, 4);
-      ctx.fillRect(2, -10, 4, 4);
-    } else if (this.type === 'gana') {
-      ctx.fillStyle = '#5d4037';
-      ctx.fillRect(-14, -20, 28, 42);
-      ctx.fillStyle = '#e0e0e0';
-      ctx.fillRect(-6, -16, 12, 3);
-    } else if (this.type === 'miniboss' || this.type === 'asura_chieftain') {
-      ctx.fillStyle = '#3e2723';
-      ctx.fillRect(-22, -28, 44, 56);
-      ctx.fillStyle = '#ffd700';
+      ctx.fillRect(-12, -20, 24, 6); // Bandana
+      ctx.fillStyle = '#ffea00'; // Eyes
+      ctx.fillRect(this.facing > 0 ? 0 : -8, -12, 4, 3);
+      // Dagger
+      ctx.fillStyle = '#b0bec5';
+      ctx.fillRect(this.facing > 0 ? 12 : -16, -2, 5, 14);
+    } else if (this.type === 'asura_patrol' || this.type === 'gana') {
+      // Copper-armored Patrol Guard with spear
+      ctx.fillStyle = '#4e342e';
+      ctx.fillRect(-13, -19, 26, 38);
+      ctx.fillStyle = '#d84315'; // Copper Chestplate
+      ctx.fillRect(-11, -13, 22, 18);
+      ctx.fillStyle = '#ffd700'; // Horned Helmet
+      ctx.fillRect(-12, -23, 24, 6);
       ctx.beginPath();
-      ctx.moveTo(-16, -28);
-      ctx.lineTo(0, -40);
-      ctx.lineTo(16, -28);
-      ctx.fill();
-    } else if (this.type === 'temple_golem') {
-      ctx.fillStyle = '#78909c';
-      ctx.fillRect(-18, -24, 36, 48);
-      ctx.fillStyle = '#00e5ff';
-      ctx.fillRect(-6, -14, 12, 4);
-    } else if (this.type === 'dark_sorcerer') {
-      ctx.fillStyle = '#311b92';
-      ctx.fillRect(-12, -20, 24, 40);
-      ctx.fillStyle = '#ffeb3b';
+      ctx.moveTo(-10, -23); ctx.lineTo(-14, -31); ctx.lineTo(-6, -23); ctx.fill();
       ctx.beginPath();
-      ctx.arc(0, -22, 6, 0, Math.PI * 2);
+      ctx.moveTo(10, -23); ctx.lineTo(14, -31); ctx.lineTo(6, -23); ctx.fill();
+      // Spear
+      ctx.fillStyle = '#8d6e63';
+      ctx.fillRect(this.facing > 0 ? 13 : -16, -28, 3, 44);
+      ctx.fillStyle = '#cfd8dc';
+      ctx.beginPath();
+      ctx.moveTo(this.facing > 0 ? 11 : -18, -28);
+      ctx.lineTo(this.facing > 0 ? 14.5 : -14.5, -38);
+      ctx.lineTo(this.facing > 0 ? 18 : -11, -28);
       ctx.fill();
     } else if (this.type === 'shadow_beast') {
+      // Obsidian quadruped with red eyes & shadow claws
       ctx.fillStyle = '#212121';
       ctx.beginPath();
-      ctx.ellipse(0, 0, 18, 10, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 2, 18, 11, 0, 0, Math.PI * 2);
       ctx.fill();
+      // Head
+      ctx.beginPath();
+      ctx.arc(this.facing > 0 ? 14 : -14, -4, 8, 0, Math.PI * 2);
+      ctx.fill();
+      // Glowing Red Eye
       ctx.fillStyle = '#ff1744';
-      ctx.fillRect(4, -4, 3, 3);
+      ctx.fillRect(this.facing > 0 ? 15 : -19, -6, 4, 3);
+      // Shadow Tail
+      ctx.strokeStyle = '#6a1b9a';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(this.facing > 0 ? -16 : 16, 2);
+      ctx.quadraticCurveTo(this.facing > 0 ? -24 : 24, -8, this.facing > 0 ? -20 : 20, -14);
+      ctx.stroke();
+    } else if (this.type === 'armored_asura' || this.type === 'temple_golem') {
+      // Heavy Stone & Gold Plated Golem Brute
+      ctx.fillStyle = '#37474f';
+      ctx.fillRect(-18, -24, 36, 48);
+      ctx.fillStyle = '#cfd8dc'; // Stone plates
+      ctx.fillRect(-15, -18, 30, 24);
+      ctx.strokeStyle = '#ffd700'; // Golden runes
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-15, -18, 30, 24);
+      // Spiked Pauldrons
+      ctx.fillStyle = '#ff8f00';
+      ctx.fillRect(-22, -24, 8, 12);
+      ctx.fillRect(14, -24, 8, 12);
+      // Red Glowing Visor
+      ctx.fillStyle = '#ff1744';
+      ctx.fillRect(this.facing > 0 ? -4 : -10, -14, 14, 4);
+    } else if (this.type === 'dark_sorcerer') {
+      // Mystical Sorcerer with floating glowing staff
+      ctx.fillStyle = '#311b92';
+      ctx.fillRect(-13, -21, 26, 42);
+      // Cowl & Robes
+      ctx.fillStyle = '#6a1b9a';
+      ctx.fillRect(-11, -11, 22, 28);
+      // Eyes
+      ctx.fillStyle = '#ffeb3b';
+      ctx.fillRect(this.facing > 0 ? 0 : -8, -14, 4, 4);
+      // Mystical Staff with glowing purple crystal
+      ctx.fillStyle = '#5d4037';
+      ctx.fillRect(this.facing > 0 ? 14 : -17, -26, 3, 44);
+      ctx.fillStyle = '#e040fb';
+      ctx.shadowColor = '#e040fb';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(this.facing > 0 ? 15.5 : -15.5, -28, 6, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // Generic / miniboss
+      ctx.fillStyle = '#3e2723';
+      ctx.fillRect(-16, -22, 32, 44);
+      ctx.fillStyle = '#ff1744';
+      ctx.fillRect(this.facing > 0 ? 0 : -8, -14, 4, 4);
     }
 
     ctx.restore();
 
-    if (this.health < this.maxHealth) {
-      const barW = this.width;
+    // Universal Health Bar
+    const isSpecial = this.type === 'armored_asura' || this.type === 'dark_sorcerer' || this.type === 'miniboss';
+    if (this.health < this.maxHealth || isSpecial) {
+      const barW = Math.max(28, this.width);
       const barH = 5;
       const hpPct = Math.max(0, this.health / this.maxHealth);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-      ctx.fillRect(screenX, this.y - 12, barW, barH);
-      ctx.fillStyle = '#ff5252';
-      ctx.fillRect(screenX, this.y - 12, barW * hpPct, barH);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(screenX + (this.width - barW) / 2 - 1, this.y - 12, barW + 2, barH + 2);
+      ctx.fillStyle = '#ff1744';
+      ctx.fillRect(screenX + (this.width - barW) / 2, this.y - 11, barW * hpPct, barH);
     }
+  }
+}
+
+// --- MINI-BOSS: ASURA WARLORD (Chapter 2 Level 16) ---
+class AsuraWarlordBoss {
+  constructor(x, y, maxHp = 380) {
+    this.x = x;
+    this.y = y;
+    this.width = 68;
+    this.height = 86;
+    this.maxHealth = maxHp;
+    this.health = maxHp;
+    this.isAlive = true;
+    this.phase = 1;
+    this.timer = 0;
+    this.hitTimer = 0;
+    this.vx = -1.2;
+    this.vy = 0;
+    this.damage = 22;
+    this.hasSummonedMinions = false;
+  }
+
+  update(player, particles) {
+    if (!this.isAlive) return;
+    this.timer++;
+    if (this.hitTimer > 0) this.hitTimer--;
+
+    // Phase transitions
+    if (this.phase === 1 && this.health <= this.maxHealth * 0.6) {
+      this.phase = 2;
+      particles.emitAuraRing(this.x + this.width / 2, this.y + this.height / 2, 160, '#ff6f00');
+      particles.emitSparks(this.x + this.width / 2, this.y + this.height / 2, 25, '#ff3d00');
+    }
+    if (this.phase === 2 && this.health <= this.maxHealth * 0.3) {
+      this.phase = 3; // Berserk enraged
+      particles.emitAuraRing(this.x + this.width / 2, this.y + this.height / 2, 200, '#d50000');
+      particles.emitSparks(this.x + this.width / 2, this.y + this.height / 2, 35, '#ff1744');
+    }
+
+    const distToPlayer = player.x - this.x;
+    const facing = distToPlayer > 0 ? 1 : -1;
+
+    // Movement: advances toward player
+    const moveSpeed = this.phase === 3 ? 2.2 : (this.phase === 2 ? 1.6 : 1.1);
+    this.vx = facing * moveSpeed;
+    this.x += this.vx;
+
+    // Boundary constraints within arena
+    if (this.x < 360) this.x = 360;
+    if (this.x > 1200) this.x = 1200;
+
+    // Attack action intervals
+    const attackInterval = this.phase === 3 ? 70 : (this.phase === 2 ? 95 : 125);
+    if (this.timer % attackInterval === 40) {
+      // Earth Shockwave Slam
+      game.spawnShockwave(this.x + (facing > 0 ? this.width : -20), this.y + 40, facing * 4.8);
+      sounds.playHit();
+      particles.emitSparks(this.x + this.width / 2, this.y + this.height, 16, '#ff6f00');
+    } else if (this.timer % attackInterval === 85 && this.phase >= 2) {
+      // Dual Shockwaves in phase 3
+      if (this.phase === 3) {
+        game.spawnShockwave(this.x + this.width, this.y + 40, 5);
+        game.spawnShockwave(this.x - 20, this.y + 40, -5);
+      }
+      particles.emitSparks(this.x + this.width / 2, this.y + this.height / 2, 14, '#ff3d00');
+    }
+
+    // Summon reinforcements once when entering phase 2
+    if (this.phase >= 2 && !this.hasSummonedMinions) {
+      this.hasSummonedMinions = true;
+      game.enemies.push(new Enemy(420, 396, 'asura_scout', 380, 560));
+      game.enemies.push(new Enemy(1080, 396, 'asura_scout', 940, 1160));
+      particles.emitSparks(this.x + this.width / 2, this.y + this.height / 2, 25, '#ffd700');
+    }
+
+    // Player touch collision
+    if (
+      player.x < this.x + this.width &&
+      player.x + player.width > this.x &&
+      player.y < this.y + this.height &&
+      player.y + player.height > this.y
+    ) {
+      player.takeDamage(this.damage);
+    }
+  }
+
+  takeHit(damage, particles) {
+    this.health -= damage;
+    this.hitTimer = 9;
+    sounds.playHit();
+    particles.emitSparks(this.x + this.width / 2, this.y + this.height / 2, 12, '#ffd700');
+
+    if (this.health <= 0) {
+      this.isAlive = false;
+      particles.emitLotusPetals(this.x + this.width / 2, this.y + this.height / 2, 25);
+      particles.emitSparks(this.x + this.width / 2, this.y + this.height / 2, 35, '#ff9800');
+      game.onEnemyDefeated(this);
+    }
+  }
+
+  draw(ctx, cameraX) {
+    if (!this.isAlive) return;
+    const sx = this.x - cameraX;
+    ctx.save();
+    ctx.translate(sx + this.width / 2, this.y + this.height / 2);
+    if (this.hitTimer > 0) ctx.filter = 'brightness(2.2)';
+
+    // Aura
+    const auraColor = this.phase === 3 ? 'rgba(213, 0, 0, 0.4)' : (this.phase === 2 ? 'rgba(255, 111, 0, 0.35)' : 'rgba(120, 30, 160, 0.25)');
+    ctx.fillStyle = auraColor;
+    ctx.beginPath();
+    ctx.arc(0, 0, 52, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Body Armor
+    ctx.fillStyle = '#2c1810';
+    ctx.fillRect(-24, -32, 48, 64);
+
+    // Armor Plates (Golden & Bronze)
+    ctx.fillStyle = '#d84315';
+    ctx.fillRect(-22, -26, 44, 28);
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(-22, -26, 44, 28);
+
+    // Head / Horned Crown
+    ctx.fillStyle = '#1a0c06';
+    ctx.beginPath();
+    ctx.arc(0, -36, 16, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Golden Crown & Horns
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    ctx.moveTo(-16, -42);
+    ctx.lineTo(-24, -58);
+    ctx.lineTo(-8, -46);
+    ctx.lineTo(0, -62);
+    ctx.lineTo(8, -46);
+    ctx.lineTo(24, -58);
+    ctx.lineTo(16, -42);
+    ctx.closePath();
+    ctx.fill();
+
+    // Red Glowing Eyes
+    ctx.fillStyle = '#ff1744';
+    ctx.fillRect(-8, -38, 5, 4);
+    ctx.fillRect(3, -38, 5, 4);
+
+    // Twin Battle Axes
+    ctx.fillStyle = '#546e7a';
+    ctx.fillRect(-32, -20, 8, 48);
+    ctx.fillRect(24, -20, 8, 48);
+    ctx.fillStyle = '#cfd8dc';
+    // Left Axe Blade
+    ctx.beginPath();
+    ctx.arc(-36, -10, 14, -Math.PI / 2, Math.PI / 2);
+    ctx.fill();
+    // Right Axe Blade
+    ctx.beginPath();
+    ctx.arc(36, -10, 14, Math.PI / 2, -Math.PI / 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // Health Bar & Name Banner
+    const barW = 100;
+    const barH = 8;
+    const hpPct = Math.max(0, this.health / this.maxHealth);
+    const barX = sx + (this.width - barW) / 2;
+    const barY = this.y - 24;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+    ctx.fillRect(barX - 2, barY - 14, barW + 4, barH + 18);
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX - 2, barY - 14, barW + 4, barH + 18);
+
+    ctx.fillStyle = '#fff9c4';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText("👑 ASURA WARLORD", barX + barW / 2, barY - 3);
+
+    ctx.fillStyle = '#b71c1c';
+    ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = this.phase === 3 ? '#ff1744' : '#ff9800';
+    ctx.fillRect(barX, barY, barW * hpPct, barH);
   }
 }
 
@@ -2012,7 +3238,10 @@ class PuzzleSwitch {
       this.isPressed = true;
       sounds.playSwitchClick();
       particles.emitSparks(this.x + 22, this.y, 14, '#00e5ff');
-      game.openGate(this.targetGateId);
+      if (typeof game !== 'undefined' && game) {
+        game.lotusSwitchesActive = (game.lotusSwitchesActive || 0) + 1;
+        game.openGate(this.targetGateId);
+      }
     }
   }
 
@@ -2211,18 +3440,29 @@ class Collectible {
       sounds.playCollect();
       particles.emitSparks(this.x + 12, this.y + 12, 10, '#ffd700');
 
-      if (this.type === 'modak' || this.type === 'coin') {
+      if (this.type === 'modak') {
         player.health = Math.min(player.maxHealth, player.health + 20);
         game.addScore(50);
         game.modaksCollected++;
+      } else if (this.type === 'coin') {
+        game.addScore(20);
+        game.coinsCollected++;
+      } else if (this.type === 'flower') {
+        player.energy = Math.min(player.maxEnergy, player.energy + 25);
+        game.addScore(25);
+        game.flowersCollected++;
+      } else if (this.type === 'star') {
+        player.energy = player.maxEnergy;
+        game.addScore(100);
+        game.starsCollected++;
+      } else if (this.type === 'crystal') {
+        player.energy = player.maxEnergy;
+        game.addScore(150);
+        game.crystalsCollected++;
       } else if (this.type === 'lotus_orb') {
         player.energy = player.maxEnergy;
         game.addScore(100);
         game.lotusOrbsCollected++;
-      } else if (this.type === 'star') {
-        player.energy = player.maxEnergy;
-        game.addScore(75);
-        game.starsCollected++;
       }
     }
   }
@@ -2256,6 +3496,30 @@ class Collectible {
       ctx.font = '10px serif';
       ctx.textAlign = 'center';
       ctx.fillText('ॐ', 0, 3.5);
+    } else if (this.type === 'flower') {
+      ctx.fillStyle = '#f06292';
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI) / 3;
+        ctx.ellipse(Math.cos(a) * 6, Math.sin(a) * 6, 4, 7, a, 0, Math.PI * 2);
+      }
+      ctx.fill();
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath();
+      ctx.arc(0, 0, 4, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (this.type === 'crystal') {
+      ctx.fillStyle = '#00e5ff';
+      ctx.beginPath();
+      ctx.moveTo(0, -10);
+      ctx.lineTo(8, -2);
+      ctx.lineTo(0, 10);
+      ctx.lineTo(-8, -2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      ctx.stroke();
     } else if (this.type === 'star') {
       ctx.fillStyle = '#ffd700';
       ctx.beginPath();
@@ -2277,6 +3541,587 @@ class Collectible {
       ctx.fill();
     }
     ctx.restore();
+  }
+}
+
+// --- MOVING PLATFORMS ---
+class MovingPlatform {
+  constructor(x, y, width, height, moveX = 0, moveY = 0, speed = 0.03) {
+    this.startX = x;
+    this.startY = y;
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
+    this.moveX = moveX;
+    this.moveY = moveY;
+    this.speed = speed;
+    this.time = Math.random() * Math.PI * 2;
+    this.prevX = x;
+    this.prevY = y;
+    this.dx = 0;
+    this.dy = 0;
+    this.isMovingPlatform = true;
+  }
+
+  update() {
+    this.prevX = this.x;
+    this.prevY = this.y;
+    this.time += this.speed;
+    this.x = this.startX + Math.sin(this.time) * this.moveX;
+    this.y = this.startY + Math.sin(this.time) * this.moveY;
+    this.dx = this.x - this.prevX;
+    this.dy = this.y - this.prevY;
+  }
+
+  draw(ctx, cameraX, theme) {
+    const sx = this.x - cameraX;
+    ctx.save();
+    if (theme === 'forest' || theme === 'corrupted_forest') {
+      ctx.fillStyle = '#4e342e';
+      ctx.fillRect(sx, this.y, this.width, this.height);
+      ctx.fillStyle = '#2e7d32';
+      ctx.fillRect(sx, this.y, this.width, 4);
+    } else if (theme === 'kailash' || theme === 'cosmic_journey') {
+      ctx.fillStyle = '#37474f';
+      ctx.fillRect(sx, this.y, this.width, this.height);
+      ctx.fillStyle = '#00e5ff';
+      ctx.fillRect(sx, this.y, this.width, 4);
+    } else {
+      ctx.fillStyle = '#cfd8dc';
+      ctx.fillRect(sx, this.y, this.width, this.height);
+      ctx.fillStyle = '#ffd700';
+      ctx.fillRect(sx, this.y, this.width, 4);
+    }
+    // Center jewel / rune
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    ctx.arc(sx + this.width / 2, this.y + this.height / 2, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  getCollisionBox() {
+    return { x: this.x, y: this.y, width: this.width, height: this.height };
+  }
+}
+
+// --- SACRED RIVER HAZARDS (WATER WITH STEPPING STONES) ---
+class SacredRiver {
+  constructor(x, y, width, height = 70, type = 'temple') {
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
+    this.type = type; // 'temple', 'light', 'sky'
+    this.waveTimer = 0;
+  }
+
+  update(player, particles) {
+    this.waveTimer += 0.05;
+    if (
+      player.x + 10 < this.x + this.width &&
+      player.x + player.width - 10 > this.x &&
+      player.y + player.height > this.y + 12 &&
+      player.y < this.y + this.height
+    ) {
+      particles.emitSparks(player.x + player.width / 2, this.y + 10, 14, this.type === 'light' ? '#00e5ff' : '#64b5f6');
+      sounds.playWaterSplash();
+      game.loseLife("Sacred River");
+    }
+  }
+
+  draw(ctx, cameraX) {
+    const sx = this.x - cameraX;
+    ctx.save();
+    let grad = ctx.createLinearGradient(0, this.y, 0, this.y + this.height);
+    if (this.type === 'light') {
+      grad.addColorStop(0, 'rgba(0, 229, 255, 0.7)');
+      grad.addColorStop(1, 'rgba(13, 71, 161, 0.85)');
+    } else if (this.type === 'sky') {
+      grad.addColorStop(0, 'rgba(255, 215, 0, 0.6)');
+      grad.addColorStop(1, 'rgba(123, 31, 162, 0.8)');
+    } else {
+      grad.addColorStop(0, 'rgba(33, 150, 243, 0.65)');
+      grad.addColorStop(1, 'rgba(13, 71, 161, 0.85)');
+    }
+    ctx.fillStyle = grad;
+    ctx.fillRect(sx, this.y, this.width, this.height);
+
+    // Animated surface waves
+    ctx.strokeStyle = this.type === 'light' ? '#80d8ff' : '#bbdefb';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < this.width; i += 16) {
+      const waveY = this.y + Math.sin(this.waveTimer + (sx + i) * 0.08) * 3;
+      if (i === 0) ctx.moveTo(sx, waveY);
+      else ctx.lineTo(sx + i, waveY);
+    }
+    ctx.stroke();
+
+    // Floating lotus pads
+    for (let i = 40; i < this.width - 40; i += 120) {
+      const padX = sx + i;
+      const padY = this.y + 4 + Math.sin(this.waveTimer * 0.7 + i) * 2;
+      ctx.fillStyle = '#2e7d32';
+      ctx.beginPath();
+      ctx.ellipse(padX, padY, 14, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f48fb1';
+      ctx.beginPath();
+      ctx.arc(padX + 2, padY - 2, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+// --- TEMPLE BELL ---
+class TempleBell {
+  constructor(x, y, id = 1) {
+    this.x = x;
+    this.y = y;
+    this.width = 36;
+    this.height = 48;
+    this.id = id;
+    this.isRung = false;
+    this.swingTimer = 0;
+  }
+
+  update(player, particles) {
+    if (this.swingTimer > 0) this.swingTimer--;
+    const touches = (
+      player.x < this.x + this.width &&
+      player.x + player.width > this.x &&
+      player.y < this.y + this.height &&
+      player.y + player.height > this.y
+    );
+    const hitByAttack = (
+      player.isAttacking &&
+      player.attackHitbox.x < this.x + this.width &&
+      player.attackHitbox.x + player.attackHitbox.width > this.x &&
+      player.attackHitbox.y < this.y + this.height &&
+      player.attackHitbox.y + player.attackHitbox.height > this.y
+    );
+    if ((touches || hitByAttack) && !this.isRung) {
+      this.ring(particles);
+    }
+  }
+
+  ring(particles) {
+    this.isRung = true;
+    this.swingTimer = 60;
+    sounds.playTempleBell(880 + (this.id * 110));
+    particles.emitSparks(this.x + 18, this.y + 24, 16, '#ffd700');
+    game.addScore(150);
+    game.onBellRung(this.id);
+  }
+
+  draw(ctx, cameraX) {
+    const sx = this.x - cameraX;
+    ctx.save();
+    ctx.translate(sx + 18, this.y);
+    const swingAngle = this.swingTimer > 0 ? Math.sin(this.swingTimer * 0.4) * 0.3 * (this.swingTimer / 60) : 0;
+    ctx.rotate(swingAngle);
+    ctx.strokeStyle = '#d4af37';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, -12);
+    ctx.lineTo(0, 4);
+    ctx.stroke();
+
+    ctx.fillStyle = this.isRung ? '#ffd700' : '#c59b27';
+    ctx.beginPath();
+    ctx.moveTo(-14, 30);
+    ctx.quadraticCurveTo(-12, 6, 0, 4);
+    ctx.quadraticCurveTo(12, 6, 14, 30);
+    ctx.lineTo(-14, 30);
+    ctx.fill();
+    ctx.fillRect(-16, 30, 32, 6);
+
+    ctx.fillStyle = '#ff6f00';
+    ctx.beginPath();
+    ctx.arc(0, 36, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '10px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('ॐ', 0, 22);
+    ctx.restore();
+  }
+}
+
+// --- CLOUD PLATFORMS (CHAPTER 3) ---
+class CloudPlatform {
+  constructor(x, y, width = 120, height = 24) {
+    this.x = x;
+    this.y = y;
+    this.baseY = y;
+    this.width = width;
+    this.height = height;
+    this.floatTimer = Math.random() * 10;
+  }
+
+  update() {
+    this.floatTimer += 0.03;
+    this.y = this.baseY + Math.sin(this.floatTimer) * 4;
+  }
+
+  draw(ctx, cameraX) {
+    const sx = this.x - cameraX;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
+    ctx.shadowColor = 'rgba(255, 215, 0, 0.35)';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    const r = this.height / 2;
+    ctx.arc(sx + r, this.y + r, r, 0, Math.PI * 2);
+    ctx.arc(sx + this.width / 3, this.y + r - 6, r + 5, 0, Math.PI * 2);
+    ctx.arc(sx + (this.width * 2) / 3, this.y + r - 4, r + 3, 0, Math.PI * 2);
+    ctx.arc(sx + this.width - r, this.y + r, r, 0, Math.PI * 2);
+    ctx.rect(sx + r, this.y, this.width - 2 * r, this.height);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  getCollisionBox() {
+    return { x: this.x, y: this.y, width: this.width, height: this.height };
+  }
+}
+
+// --- MAGICAL KEYS ---
+class MagicalKey {
+  constructor(x, y, keyId = 1) {
+    this.x = x;
+    this.y = y;
+    this.baseY = y;
+    this.keyId = keyId;
+    this.width = 24;
+    this.height = 24;
+    this.isCollected = false;
+    this.floatTimer = Math.random() * 10;
+  }
+
+  update(player, particles) {
+    if (this.isCollected) return;
+    this.floatTimer += 0.06;
+    this.y = this.baseY + Math.sin(this.floatTimer) * 5;
+    if (
+      player.x < this.x + this.width &&
+      player.x + player.width > this.x &&
+      player.y < this.y + this.height &&
+      player.y + player.height > this.y
+    ) {
+      this.isCollected = true;
+      sounds.playKeyUnlock();
+      particles.emitSparks(this.x + 12, this.y + 12, 12, '#ffd700');
+      game.addScore(200);
+      game.onKeyCollected(this.keyId);
+    }
+  }
+
+  draw(ctx, cameraX) {
+    if (this.isCollected) return;
+    const sx = this.x - cameraX;
+    ctx.save();
+    ctx.translate(sx + 12, this.y + 12);
+    ctx.fillStyle = '#ffd700';
+    ctx.strokeStyle = '#ff6f00';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(-4, 0, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillRect(3, -2, 10, 4);
+    ctx.fillRect(9, 2, 4, 4);
+    ctx.restore();
+  }
+}
+
+// --- DIVINE SYMBOLS (LEVEL 23: 5 SACRED SYMBOLS) ---
+class DivineSymbol {
+  constructor(x, y, symbolId, label = 'ॐ') {
+    this.x = x;
+    this.y = y;
+    this.baseY = y;
+    this.symbolId = symbolId;
+    this.label = label;
+    this.width = 34;
+    this.height = 34;
+    this.isCollected = false;
+    this.floatTimer = Math.random() * 10;
+  }
+
+  update(player, particles) {
+    if (this.isCollected) return;
+    this.floatTimer += 0.05;
+    this.y = this.baseY + Math.sin(this.floatTimer) * 6;
+    if (
+      player.x < this.x + this.width &&
+      player.x + player.width > this.x &&
+      player.y < this.y + this.height &&
+      player.y + player.height > this.y
+    ) {
+      this.isCollected = true;
+      sounds.playCollect();
+      particles.emitAuraRing(this.x + 17, this.y + 17, 70, '#ffd700');
+      game.addScore(300);
+      game.onDivineSymbolCollected(this.symbolId);
+    }
+  }
+
+  draw(ctx, cameraX) {
+    if (this.isCollected) return;
+    const sx = this.x - cameraX;
+    ctx.save();
+    ctx.translate(sx + 17, this.y + 17);
+    ctx.fillStyle = 'rgba(255, 215, 0, 0.35)';
+    ctx.beginPath();
+    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 18px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(this.label, 0, 1);
+    ctx.restore();
+  }
+}
+
+// --- OBSTACLE TRAPS (SPIKES, CHAKRAS, THORNS) ---
+class ObstacleTrap {
+  constructor(x, y, width = 32, height = 24, type = 'spikes') {
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
+    this.type = type;
+    this.animTimer = 0;
+  }
+
+  update(player, particles) {
+    this.animTimer += 0.08;
+    if (
+      player.x < this.x + this.width &&
+      player.x + player.width > this.x &&
+      player.y < this.y + this.height &&
+      player.y + player.height > this.y
+    ) {
+      if (player.invulnerableTimer <= 0) {
+        player.takeDamage(1);
+      }
+    }
+  }
+
+  draw(ctx, cameraX) {
+    const sx = this.x - cameraX;
+    ctx.save();
+    if (this.type === 'spikes') {
+      ctx.fillStyle = '#b0bec5';
+      ctx.strokeStyle = '#37474f';
+      ctx.lineWidth = 1;
+      const count = Math.max(1, Math.floor(this.width / 12));
+      const step = this.width / count;
+      for (let i = 0; i < count; i++) {
+        ctx.beginPath();
+        ctx.moveTo(sx + i * step, this.y + this.height);
+        ctx.lineTo(sx + (i + 0.5) * step, this.y);
+        ctx.lineTo(sx + (i + 1) * step, this.y + this.height);
+        ctx.fill();
+        ctx.stroke();
+      }
+    } else if (this.type === 'thorns') {
+      ctx.fillStyle = '#2e7d32';
+      ctx.strokeStyle = '#d84315';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(sx + this.width / 2, this.y + this.height / 2, this.width / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    } else if (this.type === 'chakra') {
+      ctx.translate(sx + this.width / 2, this.y + this.height / 2);
+      ctx.rotate(this.animTimer);
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath();
+      ctx.arc(0, 0, 14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ff6f00';
+      for (let i = 0; i < 8; i++) {
+        const a = (i * Math.PI) / 4;
+        ctx.fillRect(Math.cos(a) * 10 - 2, Math.sin(a) * 10 - 2, 5, 5);
+      }
+    }
+    ctx.restore();
+  }
+}
+
+// --- FRIENDLY ELEPHANT GUARDIAN (LEVEL 13) ---
+class ElephantGuardian {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.width = 60;
+    this.height = 70;
+    this.isPleased = false;
+    this.sway = 0;
+  }
+
+  update(player, particles) {
+    this.sway += 0.04;
+    if (game && game.lotusSwitchesActive >= 3 && !this.isPleased) {
+      this.isPleased = true;
+      sounds.playCollect();
+      particles.emitLotusPetals(this.x + 30, this.y + 30, 20);
+    }
+  }
+
+  draw(ctx, cameraX) {
+    const sx = this.x - cameraX;
+    ctx.save();
+    ctx.translate(sx + 30, this.y + 35);
+    const bob = Math.sin(this.sway) * 3;
+
+    // Body
+    ctx.fillStyle = '#78909c';
+    ctx.beginPath();
+    ctx.ellipse(0, 5 + bob, 26, 20, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Head
+    ctx.beginPath();
+    ctx.arc(16, -10 + bob, 15, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Ear
+    ctx.fillStyle = '#b0bec5';
+    ctx.beginPath();
+    ctx.ellipse(8, -12 + bob, 8, 12, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Trunk
+    ctx.strokeStyle = '#78909c';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(24, -5 + bob);
+    ctx.quadraticCurveTo(34, 10 + bob, 30, 20 + bob);
+    ctx.stroke();
+
+    // Divine Lotus Garland
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(4, 5 + bob, 14, 0.3, Math.PI - 0.3);
+    ctx.stroke();
+
+    if (this.isPleased) {
+      ctx.fillStyle = '#ffd700';
+      ctx.font = '16px serif';
+      ctx.fillText('🌺 Blessings! 🌺', -35, -30);
+    }
+
+    ctx.restore();
+  }
+}
+
+// --- FOREST GUARDIAN BOSS (LEVEL 16 - MULTI-STAGE) ---
+class ForestGuardianBoss {
+  constructor(x, y, maxHp = 400) {
+    this.x = x;
+    this.y = y;
+    this.width = 75;
+    this.height = 95;
+    this.maxHealth = maxHp;
+    this.health = maxHp;
+    this.isAlive = true;
+    this.stage = 1;
+    this.timer = 0;
+    this.hitTimer = 0;
+  }
+
+  update(player, particles) {
+    if (!this.isAlive) return;
+    this.timer++;
+    if (this.hitTimer > 0) this.hitTimer--;
+
+    if (this.stage === 1 && this.health <= this.maxHealth * 0.5) {
+      this.stage = 2;
+      particles.emitAuraRing(this.x + this.width / 2, this.y + this.height / 2, 160, '#00e676');
+      particles.emitLotusPetals(this.x + this.width / 2, this.y + this.height / 2, 25);
+    }
+
+    const interval = this.stage === 1 ? 110 : 75;
+    if (this.timer % interval === 30) {
+      const dir = player.x < this.x ? -1 : 1;
+      game.spawnShockwave(this.x, this.y + 40, dir * 5);
+      sounds.playHit();
+    }
+  }
+
+  takeHit(damage, particles) {
+    this.health -= damage;
+    this.hitTimer = 8;
+    sounds.playHit();
+    particles.emitSparks(this.x + this.width / 2, this.y + this.height / 2, 10, '#00e676');
+    if (this.health <= 0) {
+      this.isAlive = false;
+      game.onForestGuardianSoothed();
+    }
+  }
+
+  draw(ctx, cameraX) {
+    const sx = this.x - cameraX;
+    ctx.save();
+    ctx.translate(sx + this.width / 2, this.y + this.height / 2);
+    if (this.hitTimer > 0) ctx.filter = 'brightness(2.2)';
+
+    // Ancient Nature Aura
+    ctx.fillStyle = this.stage === 2 ? 'rgba(0, 230, 118, 0.4)' : 'rgba(76, 175, 80, 0.3)';
+    ctx.beginPath();
+    ctx.arc(0, 0, 62, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Ancient Treebark Golem
+    ctx.fillStyle = '#3e2723';
+    ctx.fillRect(-26, -30, 52, 65);
+    ctx.fillStyle = '#2e7d32';
+    ctx.beginPath();
+    ctx.arc(0, -35, 20, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Glowing Eyes
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(-10, -38, 6, 5);
+    ctx.fillRect(4, -38, 6, 5);
+    ctx.restore();
+
+    // Boss HP Bar
+    const barW = 340;
+    const barH = 10;
+    const barX = (ctx.canvas.width - barW) / 2;
+    const hpPct = Math.max(0, this.health / this.maxHealth);
+
+    ctx.fillStyle = 'rgba(10, 5, 20, 0.85)';
+    ctx.fillRect(barX - 4, 45, barW + 8, barH + 6);
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(barX - 4, 45, barW + 8, barH + 6);
+
+    ctx.fillStyle = this.stage === 2 ? '#00e676' : '#81c784';
+    ctx.fillRect(barX, 48, barW * hpPct, barH);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = '12px Philosopher, sans-serif';
+    ctx.textAlign = 'center';
+    const stageLabel = this.stage === 2 ? ' [STAGE 2 - PURIFYING TRIAL]' : '';
+    ctx.fillText(`Ancient Forest Guardian – Trial of Harmony${stageLabel}`, ctx.canvas.width / 2, 40);
   }
 }
 
@@ -2339,587 +4184,766 @@ class ShrineAltar {
 // 6. LEVEL CONFIGURATIONS (All 24 Playable Levels: Chapters 1, 2 & 3)
 // ==========================================================================
 const LEVEL_CONFIGS = [
-  // --- CHAPTER 1: THE BIRTH OF GANESHA ---
+  // =========================================================================
+  // 🏛️ CHAPTER 1 — THE SACRED TEMPLE (Levels 1 to 8)
+  // =========================================================================
   {
-    levelNum: 1, chapter: 1, title: "The Divine Creation", theme: "palace",
-    speaker: "Goddess Parvati", avatar: "🌺",
-    story: "Mother Parvati gently crafts a radiant young guardian with purest devotion and sandalwood paste. 'Stand guard at my sanctum,' she smiles lovingly. 'Let none enter until I finish my holy rites.'",
-    mission: "Learn the controls: Move with [A]/[D], Jump with [W]/[Space], and test your sacred staff with [J] against the playful spirits.",
-    tutorialText: "Use [A]/[D] to move, [W]/[Space] to jump, [J] to strike!",
-    platforms: [
-      { x: 0, y: 460, width: 1400, height: 80 },
-      { x: 260, y: 370, width: 140, height: 20 },
-      { x: 500, y: 310, width: 160, height: 20 },
-      { x: 760, y: 380, width: 140, height: 20 },
-      { x: 1020, y: 340, width: 150, height: 20 }
-    ],
-    enemies: [
-      { x: 420, y: 420, type: 'wisp' }, { x: 680, y: 420, type: 'wisp' }, { x: 920, y: 420, type: 'wisp' }
-    ],
-    collectibles: [
-      { x: 310, y: 330, type: 'modak' }, { x: 560, y: 270, type: 'modak' }, { x: 1080, y: 300, type: 'modak' }
-    ],
-    altars: [{ x: 600, y: 406, isGoal: false }, { x: 1300, y: 406, isGoal: true }],
-    goalX: 1300, requiredKills: 2,
-    completionStory: "You have embraced your duty with grace. Mother Parvati smiles from within her sanctum as your inner strength blossoms."
-  },
-  {
-    levelNum: 2, chapter: 1, title: "The Palace Guardian", theme: "palace",
-    speaker: "Palace Sentinel", avatar: "🛡️",
-    story: "Envious shadow raiders approach Parvati's grand palace gates, seeking to disrupt the divine rites! The young guardian plants his feet firmly upon the holy threshold.",
-    mission: "Protect the sacred palace! Defeat all shadow invaders trying to breach the inner courtyard.",
-    tutorialText: "Defeat all raiders! Use [K] for Divine Aura Shockwave when surrounded.",
-    platforms: [
-      { x: 0, y: 460, width: 1600, height: 80 },
-      { x: 220, y: 360, width: 160, height: 20 },
-      { x: 480, y: 290, width: 180, height: 20 },
-      { x: 780, y: 350, width: 180, height: 20 },
-      { x: 1100, y: 300, width: 180, height: 20 },
-      { x: 1340, y: 380, width: 140, height: 20 }
-    ],
-    enemies: [
-      { x: 340, y: 410, type: 'raider' }, { x: 540, y: 240, type: 'raider' },
-      { x: 720, y: 410, type: 'raider' }, { x: 950, y: 410, type: 'raider' }, { x: 1200, y: 410, type: 'raider' }
-    ],
-    collectibles: [
-      { x: 280, y: 320, type: 'modak' }, { x: 840, y: 310, type: 'modak' }, { x: 1160, y: 260, type: 'modak' }
-    ],
-    altars: [{ x: 740, y: 406, isGoal: false }, { x: 1500, y: 406, isGoal: true }],
-    goalX: 1500, requiredKills: 4,
-    completionStory: "The gates remain steadfast. The intruders are scattered harmlessly into the mist. You have proven yourself a true protector."
-  },
-  {
-    levelNum: 3, chapter: 1, title: "The Arrival of Shiva", theme: "kailash",
-    speaker: "Lord Shiva", avatar: "🔱", hasPreCutscene: true,
-    cutsceneDialogue: "Lord Shiva returns to Mount Kailash. The young guardian steps forward respectfully: 'Halt, revered Lord! By my mother's sacred command, none shall enter!' Shiva is intrigued by this fearless youth.",
-    story: "Lord Shiva has arrived at the gates. Though he is the supreme ascetic, the guardian stands unwavering in his promise to his mother. Shiva commands his scouts to test the youth's devotion.",
-    mission: "Stand firm against Shiva's vanguard scouts and advance through the snowy Kailash path.",
-    tutorialText: "Navigate the icy platforms and defeat Shiva's vanguard!",
-    platforms: [
-      { x: 0, y: 460, width: 1700, height: 80 },
-      { x: 200, y: 370, width: 130, height: 20 },
-      { x: 400, y: 300, width: 140, height: 20 },
-      { x: 620, y: 380, width: 160, height: 20 },
-      { x: 860, y: 290, width: 160, height: 20 },
-      { x: 1120, y: 360, width: 140, height: 20 },
-      { x: 1360, y: 300, width: 150, height: 20 }
-    ],
-    enemies: [
-      { x: 460, y: 250, type: 'gana' }, { x: 700, y: 410, type: 'gana' },
-      { x: 940, y: 240, type: 'gana' }, { x: 1220, y: 410, type: 'gana' }
-    ],
-    collectibles: [
-      { x: 450, y: 260, type: 'modak' }, { x: 910, y: 250, type: 'modak' }, { x: 1400, y: 260, type: 'modak' }
-    ],
-    altars: [{ x: 800, y: 406, isGoal: false }, { x: 1620, y: 406, isGoal: true }],
-    goalX: 1620, requiredKills: 3,
-    completionStory: "Shiva watches from afar, admiring the boy's fearless loyalty. 'This child possesses rare courage,' whispers the Mahadeva."
-  },
-  {
-    levelNum: 4, chapter: 1, title: "The Guardian's Challenge", theme: "kailash",
-    speaker: "Gana Commander", avatar: "⚔️",
-    story: "The Ganas of Shiva cannot believe a lone boy blocks their passage. Their mighty commander steps forward with a golden club to challenge your resolve!",
-    mission: "Defeat the waves of Gana protectors and overcome the mighty Gana Commander mini-boss!",
-    tutorialText: "Watch out for the Commander's ground shockwaves! Jump to avoid them.",
-    platforms: [
-      { x: 0, y: 460, width: 1600, height: 80 },
-      { x: 260, y: 360, width: 160, height: 20 },
-      { x: 520, y: 280, width: 220, height: 20 },
-      { x: 840, y: 350, width: 180, height: 20 },
-      { x: 1100, y: 290, width: 200, height: 20 }
-    ],
-    enemies: [
-      { x: 360, y: 410, type: 'gana' }, { x: 600, y: 230, type: 'gana' },
-      { x: 880, y: 410, type: 'gana' }, { x: 1240, y: 390, type: 'miniboss' }
-    ],
-    collectibles: [{ x: 580, y: 240, type: 'modak' }, { x: 1180, y: 250, type: 'modak' }],
-    altars: [{ x: 700, y: 406, isGoal: false }, { x: 1520, y: 406, isGoal: true }],
-    goalX: 1520, requiredKills: 3,
-    completionStory: "The Gana Commander bows in respect. 'Never have we seen such filial devotion,' he declares as the mountain echoes his praise."
-  },
-  {
-    levelNum: 5, chapter: 1, title: "The Divine Duel", theme: "kailash",
-    speaker: "Lord Shiva", avatar: "🕉️", isBossLevel: true,
-    story: "Lord Shiva himself steps into the arena. This is not a battle of anger, but a cosmic trial of dharma and boundless courage. Test your spirit against the Lord of Cosmic Dance!",
-    mission: "Dodge Lord Shiva's divine energy rays and cosmic rings. Strike respectfully during openings to fulfill your sacred duty!",
-    tutorialText: "Dodge Shiva's trident beams! Strike when he lands to wear down his trial meter.",
-    platforms: [
-      { x: 0, y: 460, width: 1100, height: 80 },
-      { x: 140, y: 360, width: 140, height: 20 },
-      { x: 380, y: 280, width: 200, height: 20 },
-      { x: 680, y: 360, width: 140, height: 20 }
-    ],
-    boss: { x: 760, y: 220 }, enemies: [],
-    collectibles: [{ x: 200, y: 320, type: 'modak' }, { x: 740, y: 320, type: 'modak' }],
-    altars: [], goalX: 9999, hasPostCutscene: true,
-    cutsceneDialogue: "At the height of their divine clash, cosmic destiny intervenes. Shiva recognizes the boy's immortal soul and transcendent purpose. The battle resolves into radiant golden light.",
-    completionStory: "The supreme trial is complete. Shiva looks upon the fallen youth with profound compassion and prepares the ultimate blessing."
-  },
-  {
-    levelNum: 6, chapter: 1, title: "Parvati's Divine Power", theme: "palace",
-    speaker: "Goddess Parvati", avatar: "🌺",
-    story: "Mother Parvati's divine motherly aura envelops Mount Kailash. To restore balance and prepare the sacred ritual, gather 5 Golden Lotus Orbs from the sanctum grounds.",
-    mission: "Collect all 5 Sacred Lotus Orbs while purifying the lingering illusions in the palace gardens.",
-    tutorialText: "Gather all 5 Sacred Lotus Orbs to awaken Parvati's full grace!",
-    platforms: [
-      { x: 0, y: 460, width: 1700, height: 80 },
-      { x: 200, y: 370, width: 140, height: 20 },
-      { x: 420, y: 290, width: 160, height: 20 },
-      { x: 680, y: 370, width: 160, height: 20 },
-      { x: 940, y: 280, width: 180, height: 20 },
-      { x: 1200, y: 360, width: 150, height: 20 },
-      { x: 1420, y: 270, width: 160, height: 20 }
-    ],
-    enemies: [
-      { x: 480, y: 240, type: 'raider' }, { x: 760, y: 410, type: 'raider' },
-      { x: 1020, y: 230, type: 'raider' }, { x: 1300, y: 410, type: 'raider' }
-    ],
-    collectibles: [
-      { x: 260, y: 330, type: 'lotus_orb' }, { x: 480, y: 250, type: 'lotus_orb' },
-      { x: 750, y: 330, type: 'lotus_orb' }, { x: 1010, y: 240, type: 'lotus_orb' }, { x: 1480, y: 230, type: 'lotus_orb' }
-    ],
-    altars: [{ x: 800, y: 406, isGoal: false }, { x: 1620, y: 406, isGoal: true }],
-    goalX: 1620, requiredOrbs: 5,
-    completionStory: "The 5 Sacred Lotus Orbs resonate together! Mother Parvati's radiance heals the land as she awaits the final chapter of destiny."
-  },
-  {
-    levelNum: 7, chapter: 1, title: "The Search for the Elephant", theme: "forest",
-    speaker: "Celestial Sage", avatar: "🐘",
-    story: "Shiva sends his emissaries north through the enchanted Himalayan forest to seek the noble elephant Gajasura, whose wisdom shall complete the divine child.",
-    mission: "Journey across the mystical canopy, avoid dangerous brambles, and reach the Golden Sun Gate!",
-    tutorialText: "Master your jumps across floating forest platforms to reach the Golden Gate!",
-    platforms: [
-      { x: 0, y: 460, width: 600, height: 80 }, { x: 680, y: 460, width: 500, height: 80 },
-      { x: 1260, y: 460, width: 600, height: 80 }, { x: 220, y: 360, width: 140, height: 20 },
-      { x: 440, y: 280, width: 150, height: 20 }, { x: 660, y: 340, width: 150, height: 20 },
-      { x: 880, y: 270, width: 160, height: 20 }, { x: 1140, y: 350, width: 140, height: 20 },
-      { x: 1380, y: 280, width: 160, height: 20 }
-    ],
-    enemies: [
-      { x: 300, y: 410, type: 'wisp' }, { x: 740, y: 410, type: 'gana' },
-      { x: 940, y: 220, type: 'wisp' }, { x: 1420, y: 230, type: 'gana' }
-    ],
-    collectibles: [{ x: 490, y: 240, type: 'modak' }, { x: 930, y: 230, type: 'modak' }, { x: 1440, y: 240, type: 'modak' }],
-    altars: [{ x: 800, y: 406, isGoal: false }, { x: 1720, y: 406, isGoal: true }],
-    goalX: 1720, requiredKills: 2,
-    completionStory: "Through the sacred canopy, the wise celestial elephant offers his eternal blessing. The stage is set for divine ascension!"
-  },
-  {
-    levelNum: 8, chapter: 1, title: "The Birth of Ganesha", theme: "palace",
-    speaker: "Trimurti & Devas", avatar: "🕉️",
-    story: "At the grand altar of Kailash, the Devas gather in reverence. Defeat the final echoes of cosmic doubt and ascend to your eternal divine identity!",
-    mission: "Defend the sacred altar from the final celestial wave to awaken the glorious form of Lord Ganesha!",
-    tutorialText: "Hold the sacred ground! Defeat the final wave to trigger the Divine Transformation!",
+    levelNum: 1, chapter: 1, title: "Temple Entrance", theme: "palace",
+    speaker: "Lord Ganesha", avatar: "🐘",
+    story: "Lord Ganesha begins his divine journey at the ancient holy temple. Golden pillars rise into the warm morning light as sacred bells echo across the stone steps.",
+    mission: "Tutorial: Learn movement and jumping! Collect all 10 golden modaks and reach the temple entrance.",
+    tutorialText: "Use [A]/[D] or ◀/▶ to move, [W]/[Space] or ▲ to jump! Collect 10 Modaks.",
     platforms: [
       { x: 0, y: 460, width: 1500, height: 80 },
-      { x: 240, y: 360, width: 160, height: 20 },
-      { x: 500, y: 290, width: 220, height: 20 },
-      { x: 820, y: 360, width: 180, height: 20 },
-      { x: 1100, y: 300, width: 180, height: 20 }
-    ],
-    enemies: [
-      { x: 380, y: 410, type: 'raider' }, { x: 580, y: 240, type: 'gana' },
-      { x: 900, y: 410, type: 'raider' }, { x: 1200, y: 390, type: 'miniboss' }
-    ],
-    collectibles: [{ x: 590, y: 250, type: 'modak' }, { x: 1180, y: 260, type: 'modak' }],
-    altars: [{ x: 700, y: 406, isGoal: false }, { x: 1400, y: 406, isGoal: true }],
-    goalX: 1400, requiredKills: 3,
-    completionStory: "Om Shri Ganeshaya Namaha! The heavens rain golden blossoms upon the beloved Lord of all Beginnings!"
-  },
-
-  // --- CHAPTER 2: THE REMOVER OF OBSTACLES ---
-  {
-    levelNum: 9, chapter: 2, title: "The New Beginning", theme: "palace",
-    speaker: "Lord Shiva & Parvati", avatar: "🐘",
-    story: "Awakened in his resplendent form as Lord Ganesha, you receive the divine Parashu (Axe) and blessings from both parents. A celestial training sentinel steps forward to hone your new divine powers.",
-    mission: "Practice Ganesha's abilities! Use [L] to unleash the piercing Vakratunda Trunk Blast and defeat the training sentinel.",
-    tutorialText: "Press [L] for Trunk Blast! Defeat the training sentinel to begin your quest.",
-    platforms: [
-      { x: 0, y: 460, width: 1300, height: 80 },
-      { x: 250, y: 360, width: 160, height: 20 },
-      { x: 550, y: 290, width: 180, height: 20 },
-      { x: 850, y: 360, width: 160, height: 20 }
-    ],
-    enemies: [
-      { x: 400, y: 410, type: 'wisp' }, { x: 620, y: 240, type: 'wisp' },
-      { x: 920, y: 390, type: 'temple_golem' }
-    ],
-    collectibles: [{ x: 290, y: 320, type: 'modak' }, { x: 590, y: 250, type: 'modak' }],
-    altars: [{ x: 600, y: 406, isGoal: false }, { x: 1200, y: 406, isGoal: true }],
-    goalX: 1200, requiredKills: 2,
-    completionStory: "Your divine radiance shines brightly! Shiva smiles in approval as dark omens stir from the forest realms below."
-  },
-  {
-    levelNum: 10, chapter: 2, title: "Forest of Obstacles", theme: "corrupted_forest",
-    speaker: "Forest Guardian", avatar: "🌲",
-    story: "The demon Vighnasura has corrupted the sacred forest with dark thorny vines and shadow miasma. Gather 10 Divine Energy Orbs to purify the sacred groves.",
-    mission: "Collect all 10 Divine Energy Orbs scattered across the corrupted canopy while fending off Asura minions!",
-    tutorialText: "Collect 10 Divine Energy Orbs to purify the forest temple!",
-    platforms: [
-      { x: 0, y: 460, width: 1900, height: 80 },
-      { x: 200, y: 370, width: 140, height: 20 }, { x: 420, y: 290, width: 160, height: 20 },
-      { x: 680, y: 360, width: 150, height: 20 }, { x: 920, y: 280, width: 160, height: 20 },
-      { x: 1180, y: 350, width: 140, height: 20 }, { x: 1420, y: 270, width: 160, height: 20 },
-      { x: 1660, y: 350, width: 140, height: 20 }
-    ],
-    enemies: [
-      { x: 480, y: 240, type: 'corrupted_asura' }, { x: 740, y: 410, type: 'corrupted_asura' },
-      { x: 1000, y: 230, type: 'corrupted_asura' }, { x: 1300, y: 410, type: 'corrupted_asura' },
-      { x: 1540, y: 220, type: 'corrupted_asura' }
+      { x: 260, y: 380, width: 140, height: 20 },
+      { x: 480, y: 320, width: 150, height: 20 },
+      { x: 720, y: 380, width: 140, height: 20 },
+      { x: 940, y: 320, width: 160, height: 20 },
+      { x: 1180, y: 370, width: 140, height: 20 }
     ],
     collectibles: [
-      { x: 240, y: 330, type: 'lotus_orb' }, { x: 460, y: 250, type: 'lotus_orb' },
-      { x: 720, y: 320, type: 'lotus_orb' }, { x: 800, y: 410, type: 'lotus_orb' },
-      { x: 960, y: 240, type: 'lotus_orb' }, { x: 1100, y: 410, type: 'lotus_orb' },
-      { x: 1220, y: 310, type: 'lotus_orb' }, { x: 1460, y: 230, type: 'lotus_orb' },
-      { x: 1580, y: 410, type: 'lotus_orb' }, { x: 1700, y: 310, type: 'lotus_orb' }
-    ],
-    altars: [{ x: 850, y: 406, isGoal: false }, { x: 1800, y: 406, isGoal: true }],
-    goalX: 1800, requiredOrbs: 10,
-    completionStory: "The golden orbs blaze with sacred light, cleansing the corrupted vines! Ahead, a small rustling creature approaches."
-  },
-  {
-    levelNum: 11, chapter: 2, title: "The Ride of Mushika", theme: "village",
-    speaker: "Mushika", avatar: "🐭", isRide: true,
-    story: "A noble celestial mouse named Mushika pledges his eternal loyalty to Lord Ganesha! Leaping onto Mushika's back, Ganesha dashes through the outer valleys to warn the village.",
-    mission: "High-speed ride! Dash across the valley, jump over obstacles, collect 12 Divine Stars, and outrun the pursuing shadow beasts!",
-    tutorialText: "Fast Ride Mode! Jump over rocks and spikes, collect 12 Stars to reach the village!",
-    platforms: [
-      { x: 0, y: 460, width: 2200, height: 80 },
-      { x: 260, y: 360, width: 140, height: 20 }, { x: 540, y: 320, width: 150, height: 20 },
-      { x: 840, y: 360, width: 160, height: 20 }, { x: 1140, y: 310, width: 150, height: 20 },
-      { x: 1460, y: 350, width: 160, height: 20 }, { x: 1760, y: 310, width: 150, height: 20 }
-    ],
-    enemies: [
-      { x: 600, y: 410, type: 'shadow_beast' }, { x: 920, y: 410, type: 'shadow_beast' },
-      { x: 1260, y: 410, type: 'shadow_beast' }, { x: 1600, y: 410, type: 'shadow_beast' }
-    ],
-    collectibles: [
-      { x: 180, y: 400, type: 'star' }, { x: 300, y: 310, type: 'star' },
-      { x: 440, y: 400, type: 'star' }, { x: 590, y: 270, type: 'star' },
-      { x: 740, y: 400, type: 'star' }, { x: 890, y: 310, type: 'star' },
-      { x: 1040, y: 400, type: 'star' }, { x: 1190, y: 260, type: 'star' },
-      { x: 1340, y: 400, type: 'star' }, { x: 1510, y: 300, type: 'star' },
-      { x: 1680, y: 400, type: 'star' }, { x: 1810, y: 260, type: 'star' }
-    ],
-    altars: [{ x: 1000, y: 406, isGoal: false }, { x: 2100, y: 406, isGoal: true }],
-    goalX: 2100, requiredStars: 12,
-    completionStory: "Mushika's lightning speed carries you safely to the village gates just as war horns echo in the hills!"
-  },
-  {
-    levelNum: 12, chapter: 2, title: "The Demon Invasion", theme: "village",
-    speaker: "Village Elder", avatar: "🛡️", hasDefenseTarget: true, defenseType: "village",
-    story: "Vighnasura's raiding vanguard arrives to plunder the peaceful village shrine. Ganesha plants his sacred axe at the gate, refusing to let harm touch the innocent.",
-    mission: "Protect the Village Gate! Defeat all waves of Asura invaders before the Village Defense Meter drops to zero!",
-    tutorialText: "Defend the Village Gate! Stop enemies before they damage the village!",
-    platforms: [
-      { x: 0, y: 460, width: 1600, height: 80 },
-      { x: 260, y: 350, width: 160, height: 20 }, { x: 540, y: 280, width: 200, height: 20 },
-      { x: 860, y: 350, width: 180, height: 20 }, { x: 1140, y: 290, width: 180, height: 20 }
-    ],
-    defenseTarget: { x: 140, y: 370, type: 'village' },
-    enemies: [
-      { x: 420, y: 410, type: 'corrupted_asura' }, { x: 620, y: 230, type: 'corrupted_asura' },
-      { x: 880, y: 410, type: 'corrupted_asura' }, { x: 1100, y: 410, type: 'corrupted_asura' },
-      { x: 1340, y: 390, type: 'asura_chieftain' }
-    ],
-    collectibles: [{ x: 300, y: 310, type: 'modak' }, { x: 600, y: 240, type: 'modak' }, { x: 920, y: 310, type: 'modak' }],
-    altars: [{ x: 800, y: 406, isGoal: false }, { x: 1520, y: 406, isGoal: true }],
-    goalX: 1520, requiredKills: 4,
-    completionStory: "The village is saved! The grateful villagers offer sweet golden modaks in joy and prayer."
-  },
-  {
-    levelNum: 13, chapter: 2, title: "Temple of Wisdom", theme: "ancient_temple",
-    speaker: "Temple Sage", avatar: "📜", hasPuzzles: true,
-    story: "Inside the ancient subterranean temple lies the sacred Yantra of Wisdom. Heavy stone gates bar the way; only one with sharp mind and pure courage can unlock them.",
-    mission: "Step on the glowing pressure switches to lower the stone gates, defeat the Temple Golems, and claim the divine relic!",
-    tutorialText: "Step on the glowing floor switches to open the stone gates!",
-    platforms: [
-      { x: 0, y: 460, width: 1700, height: 80 },
-      { x: 240, y: 360, width: 140, height: 20 }, { x: 460, y: 290, width: 160, height: 20 },
-      { x: 740, y: 360, width: 160, height: 20 }, { x: 1040, y: 290, width: 160, height: 20 },
-      { x: 1320, y: 360, width: 150, height: 20 }
-    ],
-    switches: [
-      { x: 300, y: 348, targetGateId: 1 },
-      { x: 820, y: 348, targetGateId: 2 }
-    ],
-    gates: [
-      { x: 640, y: 340, width: 24, height: 120, id: 1 },
-      { x: 1240, y: 340, width: 24, height: 120, id: 2 }
-    ],
-    enemies: [
-      { x: 520, y: 240, type: 'corrupted_asura' }, { x: 920, y: 410, type: 'temple_golem' },
-      { x: 1400, y: 410, type: 'temple_golem' }
-    ],
-    collectibles: [{ x: 500, y: 250, type: 'modak' }, { x: 1100, y: 250, type: 'modak' }],
-    altars: [{ x: 700, y: 406, isGoal: false }, { x: 1620, y: 406, isGoal: true }],
-    goalX: 1620, requiredKills: 2,
-    completionStory: "The ancient Yantra dissolves into Ganesha's crown, granting supreme intellect and insight into Vighnasura's weakness."
-  },
-  {
-    levelNum: 14, chapter: 2, title: "Battle of the Divine Kingdom", theme: "divine_kingdom",
-    speaker: "Indra & Devas", avatar: "💎", hasDefenseTarget: true, defenseType: "crystal",
-    story: "Vighnasura's demonic legion converges upon the celestial divine kingdom, aiming to shatter the Central Prana Crystal sustaining the heavens.",
-    mission: "Defend the Central Divine Crystal! Repel 3 fierce waves of dark sorcerers and elite asuras to secure the kingdom.",
-    tutorialText: "Protect the Central Crystal! Use Trunk Blast [L] to wipe out incoming waves.",
-    platforms: [
-      { x: 0, y: 460, width: 1600, height: 80 },
-      { x: 260, y: 360, width: 160, height: 20 }, { x: 520, y: 280, width: 220, height: 20 },
-      { x: 860, y: 350, width: 180, height: 20 }, { x: 1140, y: 290, width: 200, height: 20 }
-    ],
-    defenseTarget: { x: 600, y: 200, type: 'crystal' },
-    enemies: [
-      { x: 380, y: 410, type: 'dark_sorcerer' }, { x: 740, y: 410, type: 'corrupted_asura' },
-      { x: 960, y: 300, type: 'dark_sorcerer' }, { x: 1240, y: 390, type: 'asura_chieftain' }
-    ],
-    collectibles: [{ x: 320, y: 320, type: 'modak' }, { x: 1200, y: 250, type: 'modak' }],
-    altars: [{ x: 700, y: 406, isGoal: false }, { x: 1500, y: 406, isGoal: true }],
-    goalX: 1500, requiredKills: 3,
-    completionStory: "The celestial crystal pulses with blinding brilliance, scattering the invaders! The path to Vighnasura's fortress lies open."
-  },
-  {
-    levelNum: 15, chapter: 2, title: "Vighnasura's Fortress", theme: "fortress",
-    speaker: "Vighnasura", avatar: "👹", isBossLevel: true, bossType: "vighnasura",
-    story: "You breach the volcanic obsidian fortress of Vighnasura. The demon king towers before you, boasting that no living being can overcome his trials.",
-    mission: "Defeat Vighnasura! Dodge his dark obstacle shockwaves and survive Phase 2 when his rage unleashes at 50% health!",
-    tutorialText: "Vighnasura Boss Fight! At 50% HP, he enters Phase 2 with dark vortexes!",
-    platforms: [
-      { x: 0, y: 460, width: 1200, height: 80 },
-      { x: 180, y: 360, width: 140, height: 20 }, { x: 420, y: 280, width: 200, height: 20 },
-      { x: 740, y: 360, width: 150, height: 20 }
-    ],
-    boss: { x: 820, y: 375, maxHp: 320 }, enemies: [],
-    collectibles: [{ x: 220, y: 320, type: 'modak' }, { x: 780, y: 320, type: 'modak' }],
-    altars: [], goalX: 9999,
-    completionStory: "Wounded and reeling, Vighnasura retreats to his inner sanctum for the final confrontation of destiny!"
-  },
-  {
-    levelNum: 16, chapter: 2, title: "The Remover of Obstacles", theme: "fortress",
-    speaker: "Lord Ganesha", avatar: "🐘", isBossLevel: true, bossType: "vighnasura_final",
-    story: "At the cosmic nexus of the universe, Vighnasura unleashes all forbidden obstacle magic. Lord Ganesha raises his divine hands not in hatred, but to fulfill his divine purpose as the supreme Remover of Obstacles.",
-    mission: "Overcome Vighnasura's final empowered form using all abilities learned throughout your sacred journey!",
-    tutorialText: "Final Showdown! Combine Staff Strikes, Prana Shockwaves [K], and Trunk Blasts [L]!",
-    platforms: [
-      { x: 0, y: 460, width: 1200, height: 80 },
-      { x: 160, y: 360, width: 140, height: 20 }, { x: 400, y: 270, width: 240, height: 20 },
-      { x: 760, y: 360, width: 140, height: 20 }
-    ],
-    boss: { x: 800, y: 375, maxHp: 440 }, enemies: [],
-    collectibles: [{ x: 200, y: 320, type: 'modak' }, { x: 800, y: 320, type: 'modak' }],
-    altars: [], goalX: 9999, hasPostCutscene: true,
-    cutsceneDialogue: "As Lord Ganesha unleashes supreme divine radiance, Vighnasura falls to his knees in awe. 'Forgive me, O Lord of Beginnings! Henceforth, I shall serve you, and only create obstacles for those who stray from righteousness.' Peace and harmony return to all worlds.",
-    completionStory: "🐘 GANESHA — THE REMOVER OF OBSTACLES! Chapter 2 is gloriously complete!"
-  },
-
-  // --- CHAPTER 3: THE GREAT DIVINE RACE ---
-  {
-    levelNum: 17, chapter: 3, title: "The Divine Challenge", theme: "palace",
-    speaker: "Lord Shiva", avatar: "🔱", hasCountdown: true,
-    story: "Lord Shiva gathers Lord Ganesha and his elder brother Lord Kartikeya. 'A fruit of supreme divine wisdom shall be awarded to whoever circles the entire world first!' A sacred starting altar awaits.",
-    mission: "Listen to the sacred countdown: 3, 2, 1, GO! Reach the sacred starting archway and complete the inaugural trial.",
-    tutorialText: "Listen to the countdown! Reach the sacred starting altar to commence the race.",
-    platforms: [
-      { x: 0, y: 460, width: 1400, height: 80 },
-      { x: 240, y: 370, width: 150, height: 20 },
-      { x: 520, y: 300, width: 180, height: 20 },
-      { x: 820, y: 360, width: 160, height: 20 },
-      { x: 1100, y: 320, width: 160, height: 20 }
-    ],
-    enemies: [
-      { x: 440, y: 410, type: 'wisp' }, { x: 740, y: 410, type: 'wisp' }
-    ],
-    collectibles: [
-      { x: 300, y: 330, type: 'coin' }, { x: 600, y: 260, type: 'coin' }, { x: 900, y: 320, type: 'coin' }
-    ],
-    altars: [{ x: 650, y: 406, isGoal: false }, { x: 1300, y: 406, isGoal: true }],
-    goalX: 1300, requiredKills: 1,
-    completionStory: "The divine challenge is officially begun! Kartikeya mounts his swift peacock Mayura and shoots into the eastern skies like a sapphire bolt."
-  },
-  {
-    levelNum: 18, chapter: 3, title: "The Mouse Rider", theme: "village",
-    speaker: "Mushika", avatar: "🐭", isRide: true,
-    story: "Mushika scurries proudly to Ganesha's side. 'Hop on, my Lord! My paws may be small, but our devotion is boundless!' Ride across the valley, hitting golden speed pads!",
-    mission: "Ride Mushika across the winding roads! Dash through speed boost pads, jump over rocks, and collect 12 Divine Coins!",
-    tutorialText: "Step on cyan speed pads to get super speed bursts! Collect 12 Coins.",
-    platforms: [
-      { x: 0, y: 460, width: 2300, height: 80 },
-      { x: 260, y: 360, width: 140, height: 20 }, { x: 560, y: 320, width: 160, height: 20 },
-      { x: 880, y: 350, width: 150, height: 20 }, { x: 1200, y: 300, width: 160, height: 20 },
-      { x: 1540, y: 350, width: 160, height: 20 }, { x: 1860, y: 310, width: 150, height: 20 }
-    ],
-    boostPads: [
-      { x: 220, y: 450 }, { x: 700, y: 450 }, { x: 1380, y: 450 }, { x: 1740, y: 450 }
-    ],
-    enemies: [
-      { x: 650, y: 410, type: 'shadow_beast' }, { x: 1100, y: 410, type: 'shadow_beast' },
-      { x: 1650, y: 410, type: 'shadow_beast' }
-    ],
-    collectibles: [
-      { x: 180, y: 400, type: 'coin' }, { x: 320, y: 310, type: 'coin' },
-      { x: 480, y: 400, type: 'coin' }, { x: 620, y: 270, type: 'coin' },
-      { x: 800, y: 400, type: 'coin' }, { x: 940, y: 300, type: 'coin' },
-      { x: 1120, y: 400, type: 'coin' }, { x: 1260, y: 250, type: 'coin' },
-      { x: 1440, y: 400, type: 'coin' }, { x: 1600, y: 300, type: 'coin' },
-      { x: 1780, y: 400, type: 'coin' }, { x: 1920, y: 260, type: 'coin' }
-    ],
-    altars: [{ x: 1000, y: 406, isGoal: false }, { x: 2200, y: 406, isGoal: true }],
-    goalX: 2200, requiredCoins: 12,
-    completionStory: "Mushika darts with tremendous enthusiasm! Ahead, magnificent peacock cries ring out from the emerald highlands."
-  },
-  {
-    levelNum: 19, chapter: 3, title: "The Peacock Warrior", theme: "peacock_realm",
-    speaker: "Lord Kartikeya", avatar: "🦚", isRaceLevel: true,
-    story: "Lord Kartikeya swoops overhead aboard Mayura, his iridescent feathers sparkling with celestial starlight. 'Greeting, brother Ganesha! Let us test our pace across the Peacock Valleys!'",
-    mission: "Race alongside Lord Kartikeya! Leap across peacock feather platforms and reach the checkpoint shrine together.",
-    tutorialText: "Kartikeya flies ahead on Mayura! Keep pace across the emerald platforms.",
-    platforms: [
-      { x: 0, y: 460, width: 2200, height: 80 },
-      { x: 240, y: 360, width: 150, height: 20 }, { x: 480, y: 290, width: 180, height: 20 },
-      { x: 780, y: 360, width: 160, height: 20 }, { x: 1080, y: 290, width: 170, height: 20 },
-      { x: 1380, y: 350, width: 160, height: 20 }, { x: 1680, y: 280, width: 180, height: 20 }
-    ],
-    rival: { x: 80, y: 330, speed: 5.0 },
-    boostPads: [{ x: 380, y: 450 }, { x: 960, y: 450 }, { x: 1540, y: 450 }],
-    enemies: [
-      { x: 600, y: 410, type: 'wisp' }, { x: 1200, y: 410, type: 'wisp' }, { x: 1800, y: 410, type: 'wisp' }
-    ],
-    collectibles: [
-      { x: 300, y: 310, type: 'modak' }, { x: 840, y: 310, type: 'modak' },
-      { x: 1440, y: 300, type: 'modak' }, { x: 1980, y: 410, type: 'modak' }
-    ],
-    altars: [{ x: 900, y: 406, isGoal: false }, { x: 2100, y: 406, isGoal: true }],
-    goalX: 2100, requiredKills: 1,
-    completionStory: "Kartikeya salutes with his sacred Vel: 'You ride with great heart, Ganesha! Up ahead lies the treacherous Mountain of Trials!'"
-  },
-  {
-    levelNum: 20, chapter: 3, title: "The Mountain of Trials", theme: "mountain_trials",
-    speaker: "Mountain Hermit", avatar: "🏔️", hasFallingRocks: true,
-    story: "Towering crags reach into storm clouds. Legend says loose rocks crash down from the peaks, testing the agility and reflexes of all who seek the summit.",
-    mission: "Climb the Mountain of Trials! Watch for [⚠️] falling rock warnings, dodge the tumbling boulders, and reach the peak altar.",
-    tutorialText: "Watch out for ⚠️ falling rock warnings! Jump or dash to avoid falling boulders.",
-    platforms: [
-      { x: 0, y: 460, width: 1800, height: 80 },
-      { x: 200, y: 370, width: 140, height: 20 }, { x: 420, y: 300, width: 150, height: 20 },
-      { x: 680, y: 360, width: 160, height: 20 }, { x: 940, y: 280, width: 180, height: 20 },
-      { x: 1220, y: 350, width: 150, height: 20 }, { x: 1460, y: 270, width: 160, height: 20 }
-    ],
-    fallingRocks: [
-      { x: 350, triggerX: 250 }, { x: 620, triggerX: 500 },
-      { x: 860, triggerX: 750 }, { x: 1140, triggerX: 1000 },
-      { x: 1400, triggerX: 1280 }
-    ],
-    enemies: [
-      { x: 500, y: 250, type: 'gana' }, { x: 1020, y: 230, type: 'gana' }, { x: 1360, y: 410, type: 'gana' }
-    ],
-    collectibles: [
-      { x: 260, y: 320, type: 'modak' }, { x: 740, y: 310, type: 'modak' }, { x: 1280, y: 300, type: 'modak' }
-    ],
-    altars: [{ x: 800, y: 406, isGoal: false }, { x: 1700, y: 406, isGoal: true }],
-    goalX: 1700, requiredKills: 2,
-    completionStory: "You stand atop the high mountain crest as fresh golden sunlight warms the peaks. An ancient entrance to the Temple of Wisdom appears."
-  },
-  {
-    levelNum: 21, chapter: 3, title: "The Temple of Wisdom", theme: "wisdom_temple",
-    speaker: "Sage of Eternity", avatar: "📜", hasWisdomPuzzle: true,
-    story: "In this sacred subterranean sanctuary, speed alone cannot open the sanctum doors. The Sage of Eternity declares: 'Only by honoring Truth, Duty, and Wisdom in their sacred order shall the holy gates yield.'",
-    mission: "Collect the 3 Sacred Wisdom Glyphs in strict order: 1. ॐ (Truth) ➔ 2. 🔱 (Duty) ➔ 3. 🌺 (Wisdom) to open the final golden gate!",
-    tutorialText: "Collect symbols in exact order: 1. ॐ (Truth) ➔ 2. 🔱 (Duty) ➔ 3. 🌺 (Wisdom)!",
-    platforms: [
-      { x: 0, y: 460, width: 1800, height: 80 },
-      { x: 220, y: 360, width: 150, height: 20 }, { x: 480, y: 290, width: 160, height: 20 },
-      { x: 760, y: 360, width: 160, height: 20 }, { x: 1060, y: 290, width: 160, height: 20 },
-      { x: 1360, y: 350, width: 160, height: 20 }
-    ],
-    wisdomSymbols: [
-      { x: 280, y: 310, symbolId: 1, label: 'ॐ' },
-      { x: 840, y: 310, symbolId: 2, label: '🔱' },
-      { x: 1420, y: 300, symbolId: 3, label: '🌺' }
-    ],
-    gates: [{ x: 1580, y: 340, width: 24, height: 120, id: 99 }],
-    enemies: [
-      { x: 540, y: 240, type: 'temple_golem' }, { x: 1120, y: 240, type: 'temple_golem' }
-    ],
-    collectibles: [{ x: 520, y: 250, type: 'modak' }, { x: 1100, y: 250, type: 'modak' }],
-    altars: [{ x: 700, y: 406, isGoal: false }, { x: 1720, y: 406, isGoal: true }],
-    goalX: 1720, requiredKills: 1,
-    completionStory: "The 3 symbols ignite with eternal light! The final gate glides into the earth as cosmic starlight envelops the world."
-  },
-  {
-    levelNum: 22, chapter: 3, title: "The Cosmic Journey", theme: "cosmic_journey",
-    speaker: "Celestial Guide", avatar: "✨",
-    story: "Kartikeya's peacock soars through planetary orbits across the cosmos. Ganesha looks out upon galaxies and nebulae, contemplating the true nature of space, time, and divine family.",
-    mission: "Traverse floating cosmic platforms, avoid slow cosmic obstacles, collect 8 Celestial Stars, and reach the Grand Race Track!",
-    tutorialText: "Leap across cosmic starlight platforms and gather 8 Celestial Stars!",
-    platforms: [
-      { x: 0, y: 460, width: 1900, height: 80 },
-      { x: 220, y: 360, width: 130, height: 20 }, { x: 440, y: 280, width: 150, height: 20 },
-      { x: 700, y: 350, width: 140, height: 20 }, { x: 940, y: 270, width: 160, height: 20 },
-      { x: 1200, y: 340, width: 140, height: 20 }, { x: 1460, y: 260, width: 160, height: 20 },
-      { x: 1700, y: 340, width: 140, height: 20 }
-    ],
-    enemies: [
-      { x: 500, y: 230, type: 'wisp' }, { x: 1000, y: 220, type: 'wisp' }, { x: 1520, y: 210, type: 'wisp' }
-    ],
-    collectibles: [
-      { x: 260, y: 310, type: 'star' }, { x: 480, y: 230, type: 'star' },
-      { x: 740, y: 300, type: 'star' }, { x: 860, y: 410, type: 'star' },
-      { x: 1000, y: 220, type: 'star' }, { x: 1240, y: 290, type: 'star' },
-      { x: 1500, y: 210, type: 'star' }, { x: 1740, y: 290, type: 'star' }
-    ],
-    altars: [{ x: 800, y: 406, isGoal: false }, { x: 1820, y: 406, isGoal: true }],
-    goalX: 1820, requiredStars: 8,
-    completionStory: "Starlight crystalizes into Ganesha's heart. A profound realization dawns: all this vast universe is contained within one sacred bond."
-  },
-  {
-    levelNum: 23, chapter: 3, title: "The Final Race", theme: "divine_race_track",
-    speaker: "The Devas", avatar: "🏁", isRaceLevel: true, isRide: true, hasCountdown: true,
-    story: "The ultimate race track opens across the heavens! Kartikeya aboard Mayura and Ganesha atop Mushika take their positions side-by-side. The Devas blow golden conches!",
-    mission: "Win the Final Race! Dash across the celestial track, use speed boost rings, outpace Kartikeya, and cross the Golden Finish Line!",
-    tutorialText: "Final Race! Dash through speed boost pads and cross the finish line first!",
-    platforms: [
-      { x: 0, y: 460, width: 2800, height: 80 },
-      { x: 260, y: 360, width: 160, height: 20 }, { x: 560, y: 300, width: 180, height: 20 },
-      { x: 920, y: 350, width: 180, height: 20 }, { x: 1260, y: 290, width: 200, height: 20 },
-      { x: 1620, y: 350, width: 180, height: 20 }, { x: 1980, y: 290, width: 200, height: 20 },
-      { x: 2320, y: 350, width: 180, height: 20 }
-    ],
-    rival: { x: 60, y: 340, speed: 5.4 },
-    boostPads: [
-      { x: 200, y: 450 }, { x: 780, y: 450 }, { x: 1460, y: 450 }, { x: 2160, y: 450 }
-    ],
-    enemies: [
-      { x: 700, y: 410, type: 'wisp' }, { x: 1400, y: 410, type: 'wisp' }, { x: 2100, y: 410, type: 'wisp' }
-    ],
-    collectibles: [
-      { x: 320, y: 310, type: 'coin' }, { x: 620, y: 250, type: 'coin' },
-      { x: 1000, y: 300, type: 'coin' }, { x: 1340, y: 240, type: 'coin' },
-      { x: 1700, y: 300, type: 'coin' }, { x: 2060, y: 240, type: 'coin' }
-    ],
-    altars: [{ x: 1200, y: 406, isGoal: false }, { x: 2700, y: 406, isGoal: true }],
-    goalX: 2700,
-    completionStory: "Ganesha and Mushika surge across the finish line amid thunderous celestial cheers! Yet the greatest test of all is not physical speed..."
-  },
-  {
-    levelNum: 24, chapter: 3, title: "The Power of Wisdom", theme: "sacred_circle",
-    speaker: "Lord Shiva & Parvati", avatar: "🕉️", hasPostCutscene: true,
-    story: "Ganesha stands before Lord Shiva and Goddess Parvati on Mount Kailash. Rather than circling the outer globe again, Ganesha walks in a slow, loving, sacred circle around his beloved parents.",
-    mission: "Walk with devotion around the holy thrones of Shiva and Parvati to complete the sacred circumambulation (Pradakshina).",
-    tutorialText: "Walk forward with reverence to complete the sacred Pradakshina!",
-    platforms: [
-      { x: 0, y: 460, width: 1200, height: 80 },
-      { x: 220, y: 370, width: 160, height: 20 },
-      { x: 500, y: 310, width: 220, height: 20 },
-      { x: 800, y: 370, width: 160, height: 20 }
+      { x: 180, y: 410, type: 'modak' }, { x: 320, y: 330, type: 'modak' },
+      { x: 420, y: 410, type: 'modak' }, { x: 540, y: 270, type: 'modak' },
+      { x: 660, y: 410, type: 'modak' }, { x: 780, y: 330, type: 'modak' },
+      { x: 900, y: 410, type: 'modak' }, { x: 1010, y: 270, type: 'modak' },
+      { x: 1120, y: 410, type: 'modak' }, { x: 1240, y: 320, type: 'modak' }
     ],
     enemies: [],
-    collectibles: [
-      { x: 280, y: 320, type: 'modak' }, { x: 590, y: 260, type: 'modak' }, { x: 860, y: 320, type: 'modak' }
+    altars: [{ x: 600, y: 406, isGoal: false }, { x: 1380, y: 406, isGoal: true }],
+    goalX: 1380, requiredModaks: 10,
+    completionStory: "With joyful steps, Lord Ganesha gathers the 10 golden modaks and steps gracefully through the sacred temple gates."
+  },
+  {
+    levelNum: 2, chapter: 1, title: "Flower Garden", theme: "palace",
+    speaker: "Temple Priest", avatar: "🌺",
+    story: "Fragrant lotus ponds and marigold gardens surround the temple pavilion. Floating stone platforms drift gently across the flowering courtyard.",
+    mission: "Collect sacred flowers and golden modaks, ride moving platforms, avoid small thorn traps, and reach the golden temple bell!",
+    tutorialText: "Ride floating moving platforms! Watch out for thorn bushes on the ground.",
+    platforms: [
+      { x: 0, y: 460, width: 1650, height: 80 },
+      { x: 220, y: 370, width: 120, height: 20 },
+      { x: 760, y: 360, width: 140, height: 20 },
+      { x: 1320, y: 370, width: 150, height: 20 }
     ],
-    altars: [{ x: 1050, y: 406, isGoal: true }],
-    goalX: 1050,
-    cutsceneDialogue: "Lord Shiva asks: 'Ganesha, my son, why have you circled only us?' Ganesha smiles gently with folded hands: 'My beloved parents, the Vedas declare that one's parents are the source of all existence. In circling you, I have circled the entire cosmos.' Hearing this, Kartikeya bows in profound respect: 'Brother, your wisdom exceeds all physical speed!'",
-    completionStory: "🐘 GANESHA — THE GREAT DIVINE RACE COMPLETE! “True wisdom is greater than speed.”"
+    movingPlatforms: [
+      { x: 400, y: 310, width: 130, height: 18, moveX: 90, moveY: 0, speed: 0.025 },
+      { x: 980, y: 290, width: 130, height: 18, moveX: 0, moveY: 50, speed: 0.03 }
+    ],
+    traps: [
+      { x: 580, y: 442, width: 32, height: 18, type: 'thorns' },
+      { x: 1160, y: 442, width: 32, height: 18, type: 'thorns' }
+    ],
+    collectibles: [
+      { x: 270, y: 320, type: 'modak' }, { x: 450, y: 250, type: 'flower' },
+      { x: 660, y: 410, type: 'modak' }, { x: 820, y: 310, type: 'flower' },
+      { x: 1040, y: 230, type: 'modak' }, { x: 1250, y: 410, type: 'flower' },
+      { x: 1380, y: 320, type: 'modak' }
+    ],
+    altars: [{ x: 700, y: 406, isGoal: false }, { x: 1520, y: 406, isGoal: true }],
+    goalX: 1520,
+    completionStory: "The sacred bells chime melodiously as fresh flower garlands adorn Lord Ganesha's golden crown."
+  },
+  {
+    levelNum: 3, chapter: 1, title: "Bell of Blessings", theme: "palace",
+    speaker: "Temple Sage", avatar: "🔔",
+    story: "Three sacred bronze bells hang in the high courtyard pavilion. Legend says when all three bells ring in harmony, the divine sanctum gates swing wide open.",
+    mission: "Activate all 3 temple bells by touching or striking them! Collect coins while dodging small spinning floor traps.",
+    tutorialText: "Touch or strike [J] all 3 Temple Bells to unlock the golden blessing gate!",
+    platforms: [
+      { x: 0, y: 460, width: 1750, height: 80 },
+      { x: 260, y: 360, width: 140, height: 20 },
+      { x: 540, y: 280, width: 160, height: 20 },
+      { x: 840, y: 350, width: 150, height: 20 },
+      { x: 1120, y: 280, width: 160, height: 20 },
+      { x: 1420, y: 360, width: 150, height: 20 }
+    ],
+    bells: [
+      { x: 320, y: 300, id: 1 },
+      { x: 610, y: 220, id: 2 },
+      { x: 1190, y: 220, id: 3 }
+    ],
+    traps: [
+      { x: 440, y: 442, width: 30, height: 18, type: 'spikes' },
+      { x: 1020, y: 442, width: 30, height: 18, type: 'spikes' }
+    ],
+    collectibles: [
+      { x: 200, y: 410, type: 'coin' }, { x: 480, y: 410, type: 'coin' },
+      { x: 740, y: 410, type: 'coin' }, { x: 900, y: 300, type: 'modak' },
+      { x: 1320, y: 410, type: 'coin' }, { x: 1480, y: 310, type: 'modak' }
+    ],
+    altars: [{ x: 780, y: 406, isGoal: false }, { x: 1640, y: 406, isGoal: true }],
+    goalX: 1640, requiredBells: 3,
+    completionStory: "The three bells resonate with pure divine harmony! Celestial blessing light bathes the entire courtyard."
+  },
+  {
+    levelNum: 4, chapter: 1, title: "Temple Courtyard", theme: "palace",
+    speaker: "Courtyard Sentinel", avatar: "🏛️",
+    story: "The grand outer courtyard spans towering carved marble pillars and high archways. Moving stone blocks and spinning chakras test your timing.",
+    mission: "Traverse the expansive courtyard, leap across pillar gaps, dodge moving obstacles, and gather hidden modaks on high terraces.",
+    tutorialText: "Jump across gaps between pillars! Look high above for secret golden modaks.",
+    platforms: [
+      { x: 0, y: 460, width: 500, height: 80 },
+      { x: 580, y: 460, width: 500, height: 80 },
+      { x: 1160, y: 460, width: 650, height: 80 },
+      { x: 180, y: 360, width: 130, height: 20 },
+      { x: 380, y: 290, width: 140, height: 20 },
+      { x: 660, y: 360, width: 140, height: 20 },
+      { x: 900, y: 280, width: 150, height: 20 },
+      { x: 1240, y: 350, width: 140, height: 20 },
+      { x: 1460, y: 280, width: 160, height: 20 }
+    ],
+    traps: [
+      { x: 320, y: 442, width: 32, height: 18, type: 'chakra' },
+      { x: 800, y: 442, width: 32, height: 18, type: 'chakra' },
+      { x: 1380, y: 442, width: 32, height: 18, type: 'spikes' }
+    ],
+    collectibles: [
+      { x: 230, y: 310, type: 'modak' }, { x: 440, y: 240, type: 'modak' },
+      { x: 720, y: 310, type: 'modak' }, { x: 960, y: 230, type: 'modak' },
+      { x: 1300, y: 300, type: 'modak' }, { x: 1530, y: 230, type: 'modak' }
+    ],
+    altars: [{ x: 750, y: 406, isGoal: false }, { x: 1680, y: 406, isGoal: true }],
+    goalX: 1680,
+    completionStory: "Lord Ganesha gracefully bounds across the high terraces, laughing joyfully as golden petals scatter in his wake."
+  },
+  {
+    levelNum: 5, chapter: 1, title: "River Crossing", theme: "palace",
+    speaker: "River Sage", avatar: "🌊",
+    story: "A sacred flowing river encircles the temple sanctuary. Stepping stones and floating lotus bridges offer the only path across the deep waters.",
+    mission: "Cross the sacred river! Leap carefully across stepping stones, wooden bridges, and moving platforms. Avoid falling into the water!",
+    tutorialText: "Don't fall into the water! Step on stepping stones and moving lotus platforms.",
+    platforms: [
+      { x: 0, y: 460, width: 350, height: 80 },
+      { x: 420, y: 440, width: 70, height: 40 },  // Stepping Stone 1
+      { x: 560, y: 420, width: 80, height: 50 },  // Stepping Stone 2
+      { x: 720, y: 400, width: 140, height: 20 }, // Bridge 1
+      { x: 1140, y: 420, width: 80, height: 50 }, // Stepping Stone 3
+      { x: 1300, y: 460, width: 500, height: 80 } // Main bank
+    ],
+    rivers: [
+      { x: 350, y: 470, width: 950, height: 70, type: 'temple' }
+    ],
+    movingPlatforms: [
+      { x: 920, y: 360, width: 130, height: 18, moveX: 60, moveY: 0, speed: 0.03 }
+    ],
+    collectibles: [
+      { x: 220, y: 410, type: 'flower' }, { x: 450, y: 390, type: 'modak' },
+      { x: 590, y: 370, type: 'flower' }, { x: 780, y: 350, type: 'modak' },
+      { x: 980, y: 310, type: 'flower' }, { x: 1170, y: 370, type: 'modak' },
+      { x: 1440, y: 410, type: 'modak' }
+    ],
+    altars: [{ x: 770, y: 346, isGoal: false }, { x: 1680, y: 406, isGoal: true }],
+    goalX: 1680,
+    completionStory: "The holy river ripples with golden light as Lord Ganesha safely steps onto the opposite temple shore."
+  },
+  {
+    levelNum: 6, chapter: 1, title: "Guardian Challenge", theme: "palace",
+    speaker: "Temple Stone Golem", avatar: "🛡️",
+    story: "An ancient Stone Golem Guardian awakes at the sanctum archway. He raises his heavy stone club, testing Lord Ganesha's courage and combat prowess.",
+    mission: "Defeat or bypass the Temple Guardian! Use Staff Strike [J] or Divine Shockwave [K] while protecting your 3 lives.",
+    tutorialText: "Guardian Battle! Use [J] to strike and [K] for Divine Aura Shockwave!",
+    platforms: [
+      { x: 0, y: 460, width: 1600, height: 80 },
+      { x: 240, y: 360, width: 150, height: 20 },
+      { x: 500, y: 290, width: 180, height: 20 },
+      { x: 800, y: 350, width: 160, height: 20 },
+      { x: 1100, y: 290, width: 180, height: 20 }
+    ],
+    enemies: [
+      { x: 360, y: 410, type: 'wisp' }, { x: 620, y: 240, type: 'wisp' },
+      { x: 920, y: 410, type: 'wisp' }, { x: 1220, y: 390, type: 'temple_golem' }
+    ],
+    collectibles: [
+      { x: 300, y: 310, type: 'modak' }, { x: 570, y: 240, type: 'modak' },
+      { x: 870, y: 300, type: 'modak' }, { x: 1170, y: 240, type: 'modak' }
+    ],
+    altars: [{ x: 700, y: 406, isGoal: false }, { x: 1500, y: 406, isGoal: true }],
+    goalX: 1500, requiredKills: 2,
+    completionStory: "The Stone Golem bows in deep reverence before the divine wisdom and gentle courage of Lord Ganesha."
+  },
+  {
+    levelNum: 7, chapter: 1, title: "Golden Temple Path", theme: "palace",
+    speaker: "Temple Priest", avatar: "✨",
+    story: "The grand Golden Colonnade features moving platforms suspended over deep gaps, synchronized traps, and wandering temple sentinels.",
+    mission: "Overcome difficult obstacle combinations, ride moving platforms across chasms, and collect secret golden modaks!",
+    tutorialText: "Carefully time your jumps across moving platforms! Avoid the spinning spikes.",
+    platforms: [
+      { x: 0, y: 460, width: 450, height: 80 },
+      { x: 620, y: 460, width: 400, height: 80 },
+      { x: 1200, y: 460, width: 600, height: 80 },
+      { x: 180, y: 360, width: 130, height: 20 },
+      { x: 720, y: 350, width: 140, height: 20 },
+      { x: 1320, y: 360, width: 150, height: 20 }
+    ],
+    movingPlatforms: [
+      { x: 470, y: 380, width: 120, height: 18, moveX: 60, moveY: 0, speed: 0.03 },
+      { x: 1040, y: 370, width: 120, height: 18, moveX: 60, moveY: 0, speed: 0.035 }
+    ],
+    traps: [
+      { x: 300, y: 442, width: 32, height: 18, type: 'spikes' },
+      { x: 800, y: 442, width: 32, height: 18, type: 'chakra' },
+      { x: 1450, y: 442, width: 32, height: 18, type: 'spikes' }
+    ],
+    enemies: [
+      { x: 320, y: 410, type: 'wisp' }, { x: 780, y: 410, type: 'raider' }, { x: 1380, y: 410, type: 'raider' }
+    ],
+    collectibles: [
+      { x: 230, y: 310, type: 'modak' }, { x: 520, y: 330, type: 'coin' },
+      { x: 770, y: 300, type: 'modak' }, { x: 1090, y: 320, type: 'coin' },
+      { x: 1380, y: 310, type: 'modak' }, { x: 1580, y: 410, type: 'modak' }
+    ],
+    altars: [{ x: 740, y: 406, isGoal: false }, { x: 1700, y: 406, isGoal: true }],
+    goalX: 1700,
+    completionStory: "The Golden Colonnade gives way to the blinding brilliance of the central inner temple sanctum!"
+  },
+  {
+    levelNum: 8, chapter: 1, title: "Temple Blessing", theme: "palace",
+    speaker: "Lord Shiva & Parvati", avatar: "🕉️",
+    story: "Chapter 1 Finale! Inside the grand supreme temple sanctum, divine lights blaze and celestial flowers rain from the heavens.",
+    mission: "Chapter Finale: Gather all 20 special golden modaks across the grand temple arches to unlock Chapter 2!",
+    tutorialText: "Collect 20 Golden Modaks to awaken the supreme temple blessing!",
+    platforms: [
+      { x: 0, y: 460, width: 2000, height: 80 },
+      { x: 200, y: 370, width: 140, height: 20 },
+      { x: 420, y: 290, width: 160, height: 20 },
+      { x: 680, y: 360, width: 150, height: 20 },
+      { x: 940, y: 280, width: 160, height: 20 },
+      { x: 1200, y: 360, width: 150, height: 20 },
+      { x: 1440, y: 280, width: 160, height: 20 },
+      { x: 1680, y: 360, width: 150, height: 20 }
+    ],
+    collectibles: [
+      { x: 160, y: 410, type: 'modak' }, { x: 250, y: 320, type: 'modak' },
+      { x: 350, y: 410, type: 'modak' }, { x: 470, y: 240, type: 'modak' },
+      { x: 580, y: 410, type: 'modak' }, { x: 720, y: 310, type: 'modak' },
+      { x: 820, y: 410, type: 'modak' }, { x: 980, y: 230, type: 'modak' },
+      { x: 1080, y: 410, type: 'modak' }, { x: 1240, y: 310, type: 'modak' },
+      { x: 1340, y: 410, type: 'modak' }, { x: 1490, y: 230, type: 'modak' },
+      { x: 1580, y: 410, type: 'modak' }, { x: 1720, y: 310, type: 'modak' },
+      { x: 280, y: 220, type: 'modak' }, { x: 520, y: 190, type: 'modak' },
+      { x: 790, y: 240, type: 'modak' }, { x: 1040, y: 180, type: 'modak' },
+      { x: 1300, y: 240, type: 'modak' }, { x: 1550, y: 180, type: 'modak' }
+    ],
+    enemies: [
+      { x: 500, y: 240, type: 'wisp' }, { x: 1000, y: 230, type: 'wisp' }, { x: 1500, y: 230, type: 'wisp' }
+    ],
+    altars: [{ x: 950, y: 406, isGoal: false }, { x: 1900, y: 406, isGoal: true }],
+    goalX: 1900, requiredModaks: 20,
+    completionStory: "✨ CHAPTER 1 COMPLETE! The Temple of Blessings awakens with divine light! Chapter 2: The Divine Battle is now UNLOCKED!"
+  },
+
+  // =========================================================================
+  // ⚔️ CHAPTER 2 — THE DIVINE BATTLE (Levels 9 to 16)
+  // =========================================================================
+  {
+    levelNum: 9, chapter: 2, title: "The Asura Incursion", theme: "corrupted_forest",
+    speaker: "Divine Scout", avatar: "🛡️",
+    story: "Dark war banners flutter across the sacred mountain pass. Marauding Asura grunts have breached the perimeter, threatening the sanctity of the realm. Lord Ganesha readies his consecrated Gada (mace) for battle!",
+    mission: "The Divine Battle begins! Learn combat: press [J] on PC or [⚔] on mobile to swing your Gada. Defeat 4 Asura grunts, collect modaks and coins, and reach the war shrine!",
+    tutorialText: "⚔️ COMBAT TUTORIAL: Press [J] or [⚔] to strike enemies! Touching them deals damage. Defeat all foes!",
+    platforms: [
+      { x: 0, y: 460, width: 1700, height: 80 },
+      { x: 300, y: 370, width: 160, height: 20 },
+      { x: 620, y: 330, width: 180, height: 20 },
+      { x: 980, y: 360, width: 160, height: 20 },
+      { x: 1260, y: 320, width: 160, height: 20 }
+    ],
+    enemies: [
+      { x: 450, y: 410, type: 'asura_grunt' },
+      { x: 720, y: 410, type: 'asura_grunt' },
+      { x: 1100, y: 410, type: 'asura_grunt' },
+      { x: 1380, y: 410, type: 'asura_grunt' }
+    ],
+    collectibles: [
+      { x: 220, y: 410, type: 'modak' }, { x: 380, y: 320, type: 'coin' },
+      { x: 710, y: 280, type: 'modak' }, { x: 860, y: 410, type: 'coin' },
+      { x: 1060, y: 310, type: 'modak' }, { x: 1340, y: 270, type: 'coin' }
+    ],
+    altars: [{ x: 750, y: 406, isGoal: false }, { x: 1600, y: 406, isGoal: true }],
+    goalX: 1600,
+    completionStory: "With mighty sweeps of his golden Gada, Lord Ganesha drives back the first wave of Asura grunts! The holy perimeter holds firm."
+  },
+  {
+    levelNum: 10, chapter: 2, title: "Outpost Skirmish", theme: "corrupted_forest",
+    speaker: "Temple Vanguard", avatar: "⚔️",
+    story: "Asura scouts have established an ambush outpost across the rocky ravine. Quicker and more aggressive, they strike in coordinated pairs.",
+    mission: "Overcome coordinated pairs of agile Asura scouts! Master spacing, time your weapon swings, and clear the rocky outpost.",
+    tutorialText: "Fast Asura scouts attack in pairs! Leap over them and strike with timed combos.",
+    platforms: [
+      { x: 0, y: 460, width: 620, height: 80 },
+      { x: 680, y: 460, width: 1150, height: 80 },
+      { x: 220, y: 370, width: 140, height: 20 },
+      { x: 440, y: 310, width: 160, height: 20 },
+      { x: 800, y: 360, width: 150, height: 20 },
+      { x: 1040, y: 300, width: 160, height: 20 },
+      { x: 1300, y: 360, width: 150, height: 20 }
+    ],
+    movingPlatforms: [
+      { x: 590, y: 400, width: 100, height: 18, moveX: 30, moveY: 0, speed: 0.03 }
+    ],
+    enemies: [
+      { x: 380, y: 410, type: 'asura_scout' },
+      { x: 500, y: 410, type: 'asura_scout' },
+      { x: 880, y: 410, type: 'asura_scout' },
+      { x: 960, y: 410, type: 'asura_scout' },
+      { x: 1380, y: 410, type: 'asura_scout' },
+      { x: 1480, y: 410, type: 'asura_scout' }
+    ],
+    collectibles: [
+      { x: 280, y: 320, type: 'modak' }, { x: 520, y: 260, type: 'coin' },
+      { x: 870, y: 310, type: 'modak' }, { x: 1120, y: 250, type: 'coin' },
+      { x: 1370, y: 310, type: 'modak' }, { x: 1560, y: 410, type: 'coin' }
+    ],
+    altars: [{ x: 800, y: 406, isGoal: false }, { x: 1700, y: 406, isGoal: true }],
+    goalX: 1700,
+    completionStory: "Lord Ganesha's valor and quick wits outmatch the scout ambush. The mountain outpost is reclaimed for the devas!"
+  },
+  {
+    levelNum: 11, chapter: 2, title: "Patrols of the Ridge", theme: "fortress",
+    speaker: "High Ridge Sentinel", avatar: "🛡️",
+    story: "Disciplined Asura patrol guards march along the fortified ramparts of the High Ridge, reversing direction at platform edges.",
+    mission: "Analyze enemy patrol routes! Wait for the opportune moment, ambush them from above or behind, and break through the defense line.",
+    tutorialText: "Patrol enemies pace back and forth within their boundaries. Time your advance between their turns!",
+    platforms: [
+      { x: 0, y: 460, width: 1900, height: 80 },
+      { x: 260, y: 360, width: 220, height: 20 },
+      { x: 560, y: 290, width: 240, height: 20 },
+      { x: 880, y: 360, width: 220, height: 20 },
+      { x: 1180, y: 290, width: 240, height: 20 },
+      { x: 1480, y: 360, width: 200, height: 20 }
+    ],
+    enemies: [
+      { x: 300, y: 310, type: 'asura_patrol', patrolMinX: 260, patrolMaxX: 470 },
+      { x: 600, y: 240, type: 'asura_patrol', patrolMinX: 560, patrolMaxX: 790 },
+      { x: 700, y: 410, type: 'asura_patrol', patrolMinX: 500, patrolMaxX: 850 },
+      { x: 1220, y: 240, type: 'asura_patrol', patrolMinX: 1180, patrolMaxX: 1410 },
+      { x: 1300, y: 410, type: 'asura_patrol', patrolMinX: 1050, patrolMaxX: 1450 }
+    ],
+    collectibles: [
+      { x: 370, y: 310, type: 'modak' }, { x: 680, y: 240, type: 'coin' },
+      { x: 990, y: 310, type: 'modak' }, { x: 1300, y: 240, type: 'coin' },
+      { x: 1580, y: 310, type: 'modak' }, { x: 1720, y: 410, type: 'coin' }
+    ],
+    altars: [{ x: 800, y: 406, isGoal: false }, { x: 1800, y: 406, isGoal: true }],
+    goalX: 1800,
+    completionStory: "With divine patience and tactical brilliance, Lord Ganesha dismantles each patrol line along the jagged ridge."
+  },
+  {
+    levelNum: 12, chapter: 2, title: "The Shadow Glen", theme: "corrupted_forest",
+    speaker: "Elder Hermit", avatar: "🐺",
+    story: "A thick miasma blankets the sunken glen, home to ravenous Shadow Beasts. When they catch scent of an intruder, they sprint in ferocious charges!",
+    mission: "Survive the sudden lunges of Shadow Beasts! Leap to evade their charging bursts and counter-attack with heavy overhead strikes.",
+    tutorialText: "⚠️ DANGER: Shadow Beasts sprint rapidly when close! Jump over their sprint attacks to strike them down.",
+    platforms: [
+      { x: 0, y: 460, width: 1850, height: 80 },
+      { x: 220, y: 370, width: 130, height: 20 },
+      { x: 440, y: 300, width: 140, height: 20 },
+      { x: 680, y: 370, width: 130, height: 20 },
+      { x: 920, y: 300, width: 150, height: 20 },
+      { x: 1180, y: 370, width: 140, height: 20 },
+      { x: 1420, y: 310, width: 150, height: 20 }
+    ],
+    enemies: [
+      { x: 380, y: 410, type: 'shadow_beast' },
+      { x: 580, y: 410, type: 'shadow_beast' },
+      { x: 840, y: 410, type: 'asura_scout' },
+      { x: 1040, y: 410, type: 'shadow_beast' },
+      { x: 1250, y: 410, type: 'shadow_beast' },
+      { x: 1480, y: 410, type: 'asura_scout' },
+      { x: 1600, y: 410, type: 'shadow_beast' }
+    ],
+    collectibles: [
+      { x: 280, y: 320, type: 'modak' }, { x: 510, y: 250, type: 'coin' },
+      { x: 740, y: 320, type: 'modak' }, { x: 990, y: 250, type: 'coin' },
+      { x: 1250, y: 320, type: 'modak' }, { x: 1490, y: 260, type: 'coin' }
+    ],
+    altars: [{ x: 850, y: 406, isGoal: false }, { x: 1720, y: 406, isGoal: true }],
+    goalX: 1720,
+    completionStory: "Unflinching against the howling shadow beasts, Lord Ganesha calms the beastly frenzy with pure divine authority."
+  },
+  {
+    levelNum: 13, chapter: 2, title: "Assault on Twin Bridges", theme: "fortress",
+    speaker: "Fortress Commander", avatar: "🦅",
+    story: "Twin fortified wooden bridges cross a bottomless volcanic gorge. Corrupted Wisps hover in the skies above while Asura sentinels guard the narrow planks.",
+    mission: "Engage airborne and ground enemies simultaneously! Jump to banish flying Corrupted Wisps before tackling bridge defenders.",
+    tutorialText: "Flying Corrupted Wisps strike from above! Leap and swing your Gada in mid-air to dispel them.",
+    platforms: [
+      { x: 0, y: 460, width: 340, height: 80 },
+      { x: 400, y: 430, width: 440, height: 24 },
+      { x: 890, y: 460, width: 280, height: 80 },
+      { x: 1220, y: 430, width: 440, height: 24 },
+      { x: 1710, y: 460, width: 300, height: 80 },
+      { x: 480, y: 330, width: 120, height: 18 },
+      { x: 680, y: 330, width: 120, height: 18 },
+      { x: 1300, y: 330, width: 120, height: 18 },
+      { x: 1500, y: 330, width: 120, height: 18 }
+    ],
+    rivers: [
+      { x: 340, y: 510, width: 60, height: 40, type: 'chasm' },
+      { x: 840, y: 510, width: 50, height: 40, type: 'chasm' },
+      { x: 1170, y: 510, width: 50, height: 40, type: 'chasm' },
+      { x: 1660, y: 510, width: 50, height: 40, type: 'chasm' }
+    ],
+    enemies: [
+      { x: 520, y: 250, type: 'corrupted_wisp' },
+      { x: 740, y: 220, type: 'corrupted_wisp' },
+      { x: 1350, y: 250, type: 'corrupted_wisp' },
+      { x: 1540, y: 220, type: 'corrupted_wisp' },
+      { x: 550, y: 380, type: 'asura_patrol', patrolMinX: 410, patrolMaxX: 810 },
+      { x: 980, y: 410, type: 'asura_scout' },
+      { x: 1040, y: 410, type: 'asura_grunt' },
+      { x: 1380, y: 380, type: 'asura_patrol', patrolMinX: 1230, patrolMaxX: 1630 }
+    ],
+    collectibles: [
+      { x: 220, y: 410, type: 'modak' }, { x: 540, y: 280, type: 'coin' },
+      { x: 740, y: 280, type: 'modak' }, { x: 1020, y: 410, type: 'coin' },
+      { x: 1360, y: 280, type: 'modak' }, { x: 1560, y: 280, type: 'coin' }
+    ],
+    altars: [{ x: 960, y: 406, isGoal: false }, { x: 1850, y: 406, isGoal: true }],
+    goalX: 1850,
+    completionStory: "Both skies and bridges are cleansed of corrupting shadows as Lord Ganesha's sacred golden glow illuminates the abyss."
+  },
+  {
+    levelNum: 14, chapter: 2, title: "Fortress of Iron Asuras", theme: "fortress",
+    speaker: "Palace Sentinel", avatar: "🛡️",
+    story: "The monolithic iron fortress gates loom ahead. Clad in impenetrable enchanted black plate, heavy Armored Asuras stand like living walls!",
+    mission: "Confront high-defense Armored Asuras! Their armor shrugs off light hits. Land sustained combo strikes and monitor their visible health bars.",
+    tutorialText: "Armored Asuras have high health and damage resistance! Keep your distance between strikes and deplete their health bars.",
+    platforms: [
+      { x: 0, y: 460, width: 1950, height: 80 },
+      { x: 260, y: 370, width: 160, height: 20 },
+      { x: 520, y: 290, width: 220, height: 20 },
+      { x: 860, y: 360, width: 160, height: 20 },
+      { x: 1140, y: 290, width: 220, height: 20 },
+      { x: 1480, y: 360, width: 180, height: 20 }
+    ],
+    enemies: [
+      { x: 420, y: 405, type: 'armored_asura' },
+      { x: 620, y: 240, type: 'asura_patrol', patrolMinX: 530, patrolMaxX: 720 },
+      { x: 780, y: 410, type: 'asura_scout' },
+      { x: 1040, y: 405, type: 'armored_asura' },
+      { x: 1240, y: 240, type: 'asura_patrol', patrolMinX: 1150, patrolMaxX: 1340 },
+      { x: 1420, y: 410, type: 'asura_scout' },
+      { x: 1600, y: 405, type: 'armored_asura' }
+    ],
+    collectibles: [
+      { x: 200, y: 410, type: 'modak' }, { x: 340, y: 320, type: 'coin' },
+      { x: 630, y: 240, type: 'modak' }, { x: 940, y: 310, type: 'coin' },
+      { x: 1250, y: 240, type: 'modak' }, { x: 1570, y: 310, type: 'coin' },
+      { x: 1750, y: 410, type: 'modak' }
+    ],
+    altars: [{ x: 900, y: 406, isGoal: false }, { x: 1820, y: 406, isGoal: true }],
+    goalX: 1820,
+    completionStory: "The colossal iron armor crumbles before Ganesha's divine strength! The fortress gates swing wide open."
+  },
+  {
+    levelNum: 15, chapter: 2, title: "The Crucible of Shadows", theme: "fortress",
+    speaker: "High Rishi", avatar: "🔮",
+    story: "Within the subterranean magma caldera, sinister Dark Sorcerers chant ancient curses behind elite lines of Armored Champions and Shadow Beasts. The final gauntlet before the throne!",
+    mission: "A test of supreme mastery! Evade homing dark sorcery bolts while neutralizing armored warriors and swift beasts across 3 defensive sectors. 2 Mid-level checkpoints aid your march!",
+    tutorialText: "Dark Sorcerers cast ranged magic missiles! Dodge or jump over incoming spells and close the distance rapidly.",
+    platforms: [
+      { x: 0, y: 460, width: 750, height: 80 },
+      { x: 800, y: 460, width: 650, height: 80 },
+      { x: 1500, y: 460, width: 650, height: 80 },
+      { x: 260, y: 370, width: 140, height: 20 },
+      { x: 480, y: 290, width: 160, height: 20 },
+      { x: 920, y: 370, width: 160, height: 20 },
+      { x: 1180, y: 300, width: 180, height: 20 },
+      { x: 1600, y: 360, width: 160, height: 20 },
+      { x: 1820, y: 290, width: 160, height: 20 }
+    ],
+    enemies: [
+      { x: 380, y: 410, type: 'shadow_beast' },
+      { x: 540, y: 240, type: 'dark_sorcerer' },
+      { x: 620, y: 405, type: 'armored_asura' },
+      { x: 900, y: 410, type: 'shadow_beast' },
+      { x: 1040, y: 410, type: 'asura_patrol', patrolMinX: 840, patrolMaxX: 1200 },
+      { x: 1260, y: 250, type: 'dark_sorcerer' },
+      { x: 1380, y: 405, type: 'armored_asura' },
+      { x: 1650, y: 410, type: 'shadow_beast' },
+      { x: 1750, y: 410, type: 'asura_patrol', patrolMinX: 1550, patrolMaxX: 1950 }
+    ],
+    collectibles: [
+      { x: 180, y: 410, type: 'modak' }, { x: 330, y: 320, type: 'coin' },
+      { x: 560, y: 240, type: 'modak' }, { x: 990, y: 320, type: 'coin' },
+      { x: 1270, y: 250, type: 'modak' }, { x: 1680, y: 310, type: 'coin' },
+      { x: 1900, y: 240, type: 'modak' }
+    ],
+    altars: [
+      { x: 650, y: 406, isGoal: false },
+      { x: 1350, y: 406, isGoal: false },
+      { x: 2020, y: 406, isGoal: true }
+    ],
+    goalX: 2020,
+    completionStory: "Through the blazing crucible of dark spells and shadow steel, Lord Ganesha emerges unbroken! The inner sanctum of the Warlord is at hand."
+  },
+  {
+    levelNum: 16, chapter: 2, title: "Clash with the Asura Warlord", theme: "fortress",
+    speaker: "Asura Warlord Krodhasura", avatar: "👹",
+    story: "Chapter 2 Mini-Boss Finale! Krodhasura, the ferocious Asura Warlord, towers in his throne hall. Wielding a massive obsidian greatsword, he unleashes ground shockwaves, charging cleaves, and summons asura scouts in desperation!",
+    mission: "Mini-Boss Battle: Defeat Asura Warlord Krodhasura (380 HP)! Leap over his ground shockwaves, dodge heavy charges, strike during vulnerable recoveries, and purge the darkness to unlock Chapter 3!",
+    tutorialText: "⚔️ MINI-BOSS FINALE: Dodge Krodhasura's ground shockwaves and charge attacks! Strike repeatedly with [J]/[⚔] to claim victory!",
+    platforms: [
+      { x: 0, y: 460, width: 1400, height: 80 },
+      { x: 220, y: 360, width: 160, height: 20 },
+      { x: 500, y: 280, width: 220, height: 20 },
+      { x: 820, y: 360, width: 160, height: 20 },
+      { x: 1080, y: 280, width: 180, height: 20 }
+    ],
+    boss: { x: 950, y: 370, maxHp: 380 },
+    bossType: 'asura_warlord',
+    collectibles: [
+      { x: 290, y: 310, type: 'modak' }, { x: 600, y: 230, type: 'coin' },
+      { x: 890, y: 310, type: 'modak' }, { x: 1160, y: 230, type: 'coin' }
+    ],
+    altars: [{ x: 140, y: 406, isGoal: false }],
+    goalX: 9999,
+    completionStory: "✨ CHAPTER 2 COMPLETE! Asura Warlord Krodhasura is vanquished! The sacred mountain is saved and celestial gates open! Chapter 3: The Divine Adventure is now UNLOCKED!"
+  },
+
+  // =========================================================================
+  // ✨ CHAPTER 3 — THE DIVINE ADVENTURE (Levels 17 to 24)
+  // =========================================================================
+  {
+    levelNum: 17, chapter: 3, title: "Cloud Kingdom", theme: "cosmic_journey",
+    speaker: "Celestial Guide", avatar: "☁️",
+    story: "Welcome to the heavenly celestial realm! Shimmering cloud kingdoms float above starry nebulae and golden planetary rings.",
+    mission: "Leap across soft puffy cloud platforms! Falling through clouds loses a life. Collect celestial stars and golden modaks!",
+    tutorialText: "Welcome to Chapter 3! Jump across floating clouds. Don't fall into the celestial mist!",
+    platforms: [
+      { x: 0, y: 460, width: 300, height: 80 },
+      { x: 1450, y: 460, width: 400, height: 80 }
+    ],
+    clouds: [
+      { x: 340, y: 390, width: 130, height: 24 },
+      { x: 520, y: 320, width: 140, height: 24 },
+      { x: 720, y: 370, width: 140, height: 24 },
+      { x: 920, y: 300, width: 150, height: 24 },
+      { x: 1140, y: 360, width: 140, height: 24 },
+      { x: 1320, y: 410, width: 130, height: 24 }
+    ],
+    collectibles: [
+      { x: 200, y: 410, type: 'star' }, { x: 400, y: 340, type: 'modak' },
+      { x: 580, y: 270, type: 'star' }, { x: 780, y: 320, type: 'modak' },
+      { x: 980, y: 250, type: 'star' }, { x: 1200, y: 310, type: 'modak' },
+      { x: 1550, y: 410, type: 'modak' }
+    ],
+    altars: [{ x: 780, y: 326, isGoal: false }, { x: 1700, y: 406, isGoal: true }],
+    goalX: 1700,
+    completionStory: "Lord Ganesha dances across the fluffy white clouds, laughing as starlight sparkles beneath his lotus feet."
+  },
+  {
+    levelNum: 18, chapter: 3, title: "Floating Islands", theme: "cosmic_journey",
+    speaker: "Starlight Deva", avatar: "🪐",
+    story: "Floating celestial islands drift freely through the cosmic expanse. Fast moving platforms bridge the vast abysses between islands.",
+    mission: "Navigate multiple floating islands! Time your leaps across moving platforms and clear large heavenly gaps.",
+    tutorialText: "Carefully time your jumps across moving platforms over the wide cosmic gaps!",
+    platforms: [
+      { x: 0, y: 460, width: 350, height: 80 },
+      { x: 650, y: 420, width: 320, height: 60 },
+      { x: 1300, y: 440, width: 450, height: 80 }
+    ],
+    movingPlatforms: [
+      { x: 380, y: 380, width: 120, height: 18, moveX: 70, moveY: 0, speed: 0.035 },
+      { x: 1020, y: 360, width: 120, height: 18, moveX: 70, moveY: 0, speed: 0.04 }
+    ],
+    clouds: [
+      { x: 740, y: 300, width: 140, height: 24 }
+    ],
+    collectibles: [
+      { x: 220, y: 410, type: 'modak' }, { x: 440, y: 330, type: 'star' },
+      { x: 720, y: 370, type: 'modak' }, { x: 800, y: 250, type: 'star' },
+      { x: 1080, y: 310, type: 'modak' }, { x: 1420, y: 390, type: 'modak' }
+    ],
+    altars: [{ x: 800, y: 366, isGoal: false }, { x: 1650, y: 386, isGoal: true }],
+    goalX: 1650,
+    completionStory: "Island by island, Lord Ganesha soars across the heavens toward the grand Celestial Sanctuary."
+  },
+  {
+    levelNum: 19, chapter: 3, title: "Magical Gates", theme: "peacock_realm",
+    speaker: "Kartikeya", avatar: "🦚",
+    story: "Three glowing gates — Sun Gate, Moon Gate, and Star Gate — guard the passage to the higher cosmic spheres.",
+    mission: "Find the hidden celestial keys to unlock the magical gates and uncover the true path onward!",
+    tutorialText: "Collect the glowing celestial keys to unlock all 3 Magical Gates!",
+    platforms: [
+      { x: 0, y: 460, width: 1800, height: 80 },
+      { x: 240, y: 360, width: 140, height: 20 },
+      { x: 520, y: 280, width: 160, height: 20 },
+      { x: 800, y: 350, width: 160, height: 20 },
+      { x: 1080, y: 280, width: 160, height: 20 },
+      { x: 1360, y: 350, width: 160, height: 20 }
+    ],
+    keys: [
+      { x: 300, y: 310, keyId: 1 },
+      { x: 860, y: 300, keyId: 2 },
+      { x: 1420, y: 300, keyId: 3 }
+    ],
+    gates: [
+      { x: 660, y: 340, width: 24, height: 120, id: 1 },
+      { x: 1220, y: 340, width: 24, height: 120, id: 2 },
+      { x: 1560, y: 340, width: 24, height: 120, id: 3 }
+    ],
+    collectibles: [
+      { x: 200, y: 410, type: 'modak' }, { x: 590, y: 230, type: 'star' },
+      { x: 960, y: 410, type: 'modak' }, { x: 1140, y: 230, type: 'star' },
+      { x: 1480, y: 410, type: 'modak' }
+    ],
+    altars: [{ x: 740, y: 406, isGoal: false }, { x: 1720, y: 406, isGoal: true }],
+    goalX: 1720, requiredKeys: 3,
+    completionStory: "The Sun, Moon, and Star gates unlock in radiant synchrony, revealing the glowing Mandakini sky river."
+  },
+  {
+    levelNum: 20, chapter: 3, title: "Divine River", theme: "divine_kingdom",
+    speaker: "Goddess Ganga", avatar: "✨",
+    story: "The sacred sky river Mandakini flows through the cosmos like a ribbon of liquid starlight and liquid gold.",
+    mission: "Ride magical crystal platforms across the flowing sky river, dodge drifting stardust obstacles, and collect divine crystals!",
+    tutorialText: "Leap across floating crystal platforms! Collect divine crystals and stay out of the river.",
+    platforms: [
+      { x: 0, y: 460, width: 320, height: 80 },
+      { x: 420, y: 420, width: 90, height: 40 },
+      { x: 620, y: 380, width: 140, height: 20 },
+      { x: 1180, y: 410, width: 90, height: 40 },
+      { x: 1340, y: 460, width: 500, height: 80 }
+    ],
+    rivers: [
+      { x: 320, y: 470, width: 1020, height: 70, type: 'sky' }
+    ],
+    movingPlatforms: [
+      { x: 820, y: 340, width: 130, height: 18, moveX: 80, moveY: 0, speed: 0.035 }
+    ],
+    collectibles: [
+      { x: 220, y: 410, type: 'crystal' }, { x: 460, y: 370, type: 'modak' },
+      { x: 680, y: 330, type: 'crystal' }, { x: 880, y: 290, type: 'star' },
+      { x: 1220, y: 360, type: 'crystal' }, { x: 1460, y: 410, type: 'modak' }
+    ],
+    altars: [{ x: 680, y: 326, isGoal: false }, { x: 1720, y: 406, isGoal: true }],
+    goalX: 1720,
+    completionStory: "Pure celestial waters bathe Ganesha's path in eternal peace as the grand golden palace of the heavens comes into view."
+  },
+  {
+    levelNum: 21, chapter: 3, title: "Temple in the Sky", theme: "divine_kingdom",
+    speaker: "Indra", avatar: "🏛️",
+    story: "A colossal golden temple floats atop the highest clouds with interconnected sanctums, golden statues, and secret chambers.",
+    mission: "Explore the vast heavenly temple, discover keys to unlock sacred chambers, and find secret vaults filled with modaks!",
+    tutorialText: "Explore the multi-room Sky Temple! Find keys to open doors and discover hidden modak vaults.",
+    platforms: [
+      { x: 0, y: 460, width: 1900, height: 80 },
+      { x: 220, y: 360, width: 150, height: 20 },
+      { x: 480, y: 280, width: 180, height: 20 },
+      { x: 760, y: 350, width: 160, height: 20 },
+      { x: 1040, y: 270, width: 180, height: 20 },
+      { x: 1320, y: 350, width: 160, height: 20 },
+      { x: 1560, y: 270, width: 180, height: 20 }
+    ],
+    keys: [{ x: 560, y: 230, keyId: 1 }],
+    gates: [{ x: 1260, y: 340, width: 24, height: 120, id: 1 }],
+    collectibles: [
+      { x: 280, y: 310, type: 'modak' }, { x: 520, y: 230, type: 'modak' },
+      { x: 820, y: 300, type: 'crystal' }, { x: 1100, y: 220, type: 'modak' },
+      { x: 1380, y: 300, type: 'modak' }, { x: 1620, y: 220, type: 'star' }
+    ],
+    altars: [{ x: 840, y: 406, isGoal: false }, { x: 1820, y: 406, isGoal: true }],
+    goalX: 1820,
+    completionStory: "The heavenly temple chambers resonate with divine conch shells as the Final Trials commence."
+  },
+  {
+    levelNum: 22, chapter: 3, title: "Final Trial", theme: "divine_race_track",
+    speaker: "Trimurti Devas", avatar: "⚔️",
+    story: "The ultimate trial gauntlet tests every skill mastered across the entire journey: moving platforms, timed spikes, puzzles, and guardians.",
+    mission: "Overcome the supreme gauntlet! Combine precision platforming, dodging, and swift reflexes to reach the divine gate.",
+    tutorialText: "High Difficulty! Moving platforms, falling stardust, and sentinels combine in this ultimate gauntlet!",
+    platforms: [
+      { x: 0, y: 460, width: 400, height: 80 },
+      { x: 600, y: 460, width: 400, height: 80 },
+      { x: 1200, y: 460, width: 700, height: 80 },
+      { x: 180, y: 360, width: 140, height: 20 },
+      { x: 700, y: 350, width: 140, height: 20 },
+      { x: 1300, y: 350, width: 140, height: 20 }
+    ],
+    movingPlatforms: [
+      { x: 430, y: 370, width: 120, height: 18, moveX: 60, moveY: 0, speed: 0.04 },
+      { x: 1040, y: 360, width: 120, height: 18, moveX: 60, moveY: 0, speed: 0.04 }
+    ],
+    traps: [
+      { x: 260, y: 442, width: 32, height: 18, type: 'chakra' },
+      { x: 800, y: 442, width: 32, height: 18, type: 'chakra' },
+      { x: 1450, y: 442, width: 32, height: 18, type: 'spikes' }
+    ],
+    enemies: [
+      { x: 300, y: 410, type: 'wisp' }, { x: 740, y: 410, type: 'gana' }, { x: 1400, y: 410, type: 'gana' }
+    ],
+    collectibles: [
+      { x: 230, y: 310, type: 'modak' }, { x: 750, y: 300, type: 'crystal' },
+      { x: 1350, y: 300, type: 'star' }, { x: 1600, y: 410, type: 'modak' }
+    ],
+    altars: [{ x: 750, y: 406, isGoal: false }, { x: 1800, y: 406, isGoal: true }],
+    goalX: 1800,
+    completionStory: "Flawlessly conquering the divine gauntlet, Lord Ganesha stands ready before the sacred gates of Mount Kailash."
+  },
+  {
+    levelNum: 23, chapter: 3, title: "Ganesha's Divine Challenge", theme: "divine_kingdom",
+    speaker: "Trimurti", avatar: "🕉️",
+    story: "A very difficult cosmic trial across a grand celestial arena. Only by collecting the 5 Divine Sacred Symbols can the final gateway open.",
+    mission: "Collect all 5 Divine Symbols: 1. ॐ (Om), 2. 🔱 (Trishul), 3. 🌺 (Lotus), 4. 🐚 (Shankha), 5. 🪔 (Diya) to unlock the finale gate!",
+    tutorialText: "Collect all 5 Divine Symbols (ॐ, 🔱, 🌺, 🐚, 🪔) to unlock the final gate!",
+    platforms: [
+      { x: 0, y: 460, width: 2200, height: 80 },
+      { x: 240, y: 360, width: 140, height: 20 },
+      { x: 500, y: 280, width: 160, height: 20 },
+      { x: 780, y: 350, width: 160, height: 20 },
+      { x: 1060, y: 270, width: 160, height: 20 },
+      { x: 1340, y: 350, width: 160, height: 20 },
+      { x: 1620, y: 270, width: 160, height: 20 },
+      { x: 1880, y: 350, width: 160, height: 20 }
+    ],
+    divineSymbols: [
+      { x: 300, y: 310, symbolId: 1, label: 'ॐ' },
+      { x: 560, y: 230, symbolId: 2, label: '🔱' },
+      { x: 840, y: 300, symbolId: 3, label: '🌺' },
+      { x: 1120, y: 220, symbolId: 4, label: '🐚' },
+      { x: 1400, y: 300, symbolId: 5, label: '🪔' }
+    ],
+    gates: [
+      { x: 1800, y: 340, width: 24, height: 120, id: 55 }
+    ],
+    collectibles: [
+      { x: 400, y: 410, type: 'modak' }, { x: 950, y: 410, type: 'modak' },
+      { x: 1500, y: 410, type: 'modak' }, { x: 1980, y: 410, type: 'crystal' }
+    ],
+    altars: [{ x: 950, y: 406, isGoal: false }, { x: 2100, y: 406, isGoal: true }],
+    goalX: 2100, requiredSymbols: 5,
+    completionStory: "All 5 Divine Symbols ignite with blinding golden radiance! The final gate opens onto the Supreme Cosmic Throne."
+  },
+  {
+    levelNum: 24, chapter: 3, title: "THE GRAND DIVINE FINALE", theme: "sacred_circle",
+    speaker: "Lord Shiva & Parvati", avatar: "🕉️", hasPostCutscene: true,
+    story: "THE GRAND FINALE! Before the radiant golden thrones of Lord Shiva and Goddess Parvati, Lord Ganesha completes the ultimate divine journey of devotion, wisdom, and victory.",
+    mission: "Grand Finale: Overcome the final obstacle sequence, claim the Supreme Golden Modak, and reach the Throne of Blessings!",
+    tutorialText: "The Grand Finale! Collect the Supreme Golden Modak and reach the Throne of Blessings!",
+    platforms: [
+      { x: 0, y: 460, width: 1600, height: 80 },
+      { x: 200, y: 370, width: 150, height: 20 },
+      { x: 440, y: 300, width: 160, height: 20 },
+      { x: 720, y: 360, width: 160, height: 20 },
+      { x: 1000, y: 300, width: 180, height: 20 },
+      { x: 1260, y: 360, width: 160, height: 20 }
+    ],
+    clouds: [
+      { x: 340, y: 340, width: 110, height: 24 },
+      { x: 620, y: 330, width: 110, height: 24 },
+      { x: 900, y: 330, width: 110, height: 24 }
+    ],
+    collectibles: [
+      { x: 260, y: 320, type: 'modak' }, { x: 500, y: 250, type: 'star' },
+      { x: 780, y: 310, type: 'crystal' }, { x: 1060, y: 250, type: 'modak' },
+      { x: 1320, y: 310, type: 'modak' },
+      { x: 1450, y: 410, type: 'modak' } // Supreme Golden Modak
+    ],
+    altars: [{ x: 1480, y: 406, isGoal: true }],
+    goalX: 1480,
+    cutsceneDialogue: "Lord Shiva and Mother Parvati shower golden flowers upon Lord Ganesha: 'Beloved son, through your purity, wisdom, courage, and devotion, you have enlightened all three worlds! Henceforth, you shall be worshiped first in all sacred beginnings. Every obstacle shall dissolve before your name.' All the Devas and Ganas chant in joyful ecstasy: 'Ganapati Bappa Morya!'",
+    completionStory: "🪔 CONGRATULATIONS! You have completed all 24 levels across all 3 chapters of Ganesha: The Divine Adventure!"
   }
 ];
 
@@ -2948,14 +4972,24 @@ class GameEngine {
     this.activeChapterTab = 1;
     this.score = 0;
     this.levelScore = 0;
+    this.lives = 3;
+    this.maxLives = 3;
+    this.levelStars = {};
+    this.levelStartTime = Date.now();
     this.enemiesDefeated = 0;
     this.modaksCollected = 0;
     this.lotusOrbsCollected = 0;
     this.starsCollected = 0;
     this.coinsCollected = 0;
+    this.flowersCollected = 0;
+    this.crystalsCollected = 0;
 
-    // Wisdom puzzle tracking
+    // Puzzle & Mechanics tracking
     this.wisdomCollectedCount = 0;
+    this.bellsRungCount = 0;
+    this.keysCollected = 0;
+    this.divineSymbolsCollected = 0;
+    this.lotusSwitchesActive = 0;
 
     // Countdown state
     this.isCountingDown = false;
@@ -2968,6 +5002,14 @@ class GameEngine {
 
     this.player = new Player(60, 380);
     this.platforms = [];
+    this.movingPlatforms = [];
+    this.rivers = [];
+    this.bells = [];
+    this.clouds = [];
+    this.keys = [];
+    this.divineSymbols = [];
+    this.traps = [];
+    this.elephantGuardian = null;
     this.enemies = [];
     this.boss = null;
     this.rival = null;
@@ -2981,24 +5023,78 @@ class GameEngine {
     this.gates = [];
     this.defenseTarget = null;
 
-    // Load persisted progress if any
+    // Devotee Profile & Leaderboard
+    this.playerName = 'Devotee';
+    this.playerAvatar = '🐘';
+    this.leaderboardData = [];
+    this.welcomeParticlesInitialized = false;
+    this.introParticlesInitialized = false;
+    this.introFinished = false;
+    this.introTimers = [];
+    this.vibrationEnabled = true;
+
+    // Load persisted progress, profile, settings & leaderboard
     this.loadProgress();
+    this.loadProfile();
+    this.loadLeaderboard();
+    this.loadSettings();
 
     this.bindUI();
     this.initLevelGrid();
+    this.initIntroParticles();
+    this.initWelcomeParticles();
     this.initMenuParticles();
+    this.updateProfileUI();
+    this.updateWelcomeGreeting();
     this.loadLevel(0);
 
-    // Keep story-modal hidden on first boot and show main menu
+    // Initial screens: show cinematic-intro-screen on first boot, keep others hidden
     const storyModal = document.getElementById('story-modal');
     if (storyModal) storyModal.classList.add('hidden');
     const mainMenu = document.getElementById('main-menu-overlay');
-    if (mainMenu) mainMenu.classList.remove('hidden');
+    if (mainMenu) mainMenu.classList.add('hidden');
+    const welcomeScreen = document.getElementById('welcome-screen');
+    if (welcomeScreen) welcomeScreen.classList.add('hidden');
 
-    sounds.playTrack('menu');
+    const introScreen = document.getElementById('cinematic-intro-screen');
+    if (introScreen) {
+      introScreen.classList.remove('hidden');
+      this.playCinematicIntro();
+    } else if (welcomeScreen) {
+      welcomeScreen.classList.remove('hidden');
+      sounds.playTrack('menu');
+    }
 
     this.lastTime = performance.now();
     requestAnimationFrame((t) => this.loop(t));
+  }
+
+  // Haptic Feedback / Mobile Vibration Helper
+  triggerVibrate(pattern = 35) {
+    if (this.vibrationEnabled && typeof navigator !== 'undefined' && navigator.vibrate) {
+      try {
+        navigator.vibrate(pattern);
+      } catch (_) {}
+    }
+  }
+
+  loadSettings() {
+    try {
+      const vib = localStorage.getItem('ganesha_vibration');
+      if (vib !== null) {
+        this.vibrationEnabled = vib !== 'false';
+      }
+    } catch (e) {
+      console.warn("Could not load settings:", e);
+    }
+  }
+
+  saveSettings() {
+    try {
+      localStorage.setItem('ganesha_vibration', this.vibrationEnabled ? 'true' : 'false');
+    } catch (e) {
+      console.warn("Could not save settings:", e);
+    }
   }
 
   // LocalStorage Persistence
@@ -3006,7 +5102,8 @@ class GameEngine {
     try {
       const data = {
         unlockedLevels: this.unlockedLevels,
-        score: this.score
+        score: this.score,
+        levelStars: this.levelStars
       };
       localStorage.setItem('ganesha_adventure_save', JSON.stringify(data));
     } catch (e) {
@@ -3025,13 +5122,511 @@ class GameEngine {
         if (data.score) {
           this.score = Math.max(this.score, data.score);
         }
+        if (data.levelStars) {
+          this.levelStars = data.levelStars;
+        }
       }
     } catch (e) {
       console.warn("Could not load from localStorage:", e);
     }
   }
 
+  loadProfile() {
+    try {
+      const savedName = localStorage.getItem('ganesha_player_name');
+      const savedAvatar = localStorage.getItem('ganesha_player_avatar');
+      if (savedName && savedName.trim()) {
+        this.playerName = savedName.trim();
+      }
+      if (savedAvatar && savedAvatar.trim()) {
+        this.playerAvatar = savedAvatar.trim();
+      }
+    } catch (e) {
+      console.warn("Could not load profile from localStorage:", e);
+    }
+  }
+
+  saveProfile(name, avatar) {
+    if (name && name.trim()) {
+      this.playerName = name.trim();
+    }
+    if (avatar && avatar.trim()) {
+      this.playerAvatar = avatar.trim();
+    }
+    try {
+      localStorage.setItem('ganesha_player_name', this.playerName);
+      localStorage.setItem('ganesha_player_avatar', this.playerAvatar);
+    } catch (e) {
+      console.warn("Could not save profile to localStorage:", e);
+    }
+    this.updateProfileUI();
+    this.updateProfileDashboardUI();
+    this.updateWelcomeGreeting();
+    this.recordLeaderboardScore();
+  }
+
+  updateWelcomeGreeting() {
+    const welcomeGreeting = document.getElementById('welcome-greeting');
+    const greetingText = document.getElementById('welcome-greeting-text');
+    const hasSavedName = localStorage.getItem('ganesha_player_name');
+    if (welcomeGreeting && greetingText) {
+      if (hasSavedName && this.playerName && this.playerName !== 'Devotee') {
+        welcomeGreeting.classList.remove('hidden');
+        greetingText.textContent = `Welcome back, ${this.playerName}! 🙏`;
+      } else {
+        welcomeGreeting.classList.add('hidden');
+      }
+    }
+  }
+
+  getDivineTitle() {
+    if (this.unlockedLevels >= 24) return "👑 Supreme Vinayaka Avatar";
+    if (this.unlockedLevels >= 17) return "🌌 Cosmic Kailash Explorer";
+    if (this.unlockedLevels >= 9) return "⚔️ Sacred Asura Vanquisher";
+    if (this.unlockedLevels >= 5) return "🌺 Kailash Gate Guardian";
+    return "🌟 Sacred Devotee";
+  }
+
+  getHighestChapterName() {
+    if (this.unlockedLevels >= 17) return "Chapter 3: The Divine Adventure";
+    if (this.unlockedLevels >= 9) return "Chapter 2: The Divine Battle";
+    return "Chapter 1: The Sacred Temple";
+  }
+
+  updateProfileUI() {
+    const menuName = document.getElementById('menu-player-name');
+    if (menuName) menuName.textContent = this.playerName;
+    const menuAvatar = document.getElementById('menu-player-avatar');
+    if (menuAvatar) menuAvatar.textContent = this.playerAvatar;
+
+    const hudName = document.getElementById('hud-player-name');
+    if (hudName) hudName.textContent = this.playerName;
+    const hudAvatar = document.getElementById('hud-player-avatar');
+    if (hudAvatar) hudAvatar.textContent = this.playerAvatar;
+
+    const bannerName = document.getElementById('banner-player-name');
+    if (bannerName) bannerName.textContent = this.playerName;
+    const bannerAvatar = document.getElementById('banner-player-avatar');
+    if (bannerAvatar) bannerAvatar.textContent = this.playerAvatar;
+
+    const inputName = document.getElementById('player-name-input');
+    if (inputName) inputName.value = this.playerName;
+
+    document.querySelectorAll('.avatar-chip').forEach(chip => {
+      if (chip.getAttribute('data-avatar') === this.playerAvatar) {
+        chip.classList.add('active');
+      } else {
+        chip.classList.remove('active');
+      }
+    });
+  }
+
+  updateProfileDashboardUI() {
+    const avatarEl = document.getElementById('dash-avatar-circle');
+    if (avatarEl) avatarEl.textContent = this.playerAvatar || '🐘';
+    const nameEl = document.getElementById('dash-player-name');
+    if (nameEl) nameEl.textContent = this.playerName || 'Devotee';
+    const titleEl = document.getElementById('dash-divine-title');
+    if (titleEl) titleEl.textContent = this.getDivineTitle();
+
+    const pct = Math.min(100, Math.round((Math.min(24, this.unlockedLevels) / 24) * 100));
+
+    const pctEl = document.getElementById('dash-progress-pct');
+    if (pctEl) pctEl.textContent = `${pct}%`;
+    const barEl = document.getElementById('dash-progress-bar');
+    if (barEl) barEl.style.width = `${Math.max(4, pct)}%`;
+
+    const scoreEl = document.getElementById('dash-total-score');
+    if (scoreEl) scoreEl.textContent = this.score.toLocaleString();
+
+    const levelsEl = document.getElementById('dash-levels-completed');
+    if (levelsEl) levelsEl.textContent = `${this.unlockedLevels} / 24`;
+
+    let totalStars = 0;
+    for (let i = 0; i < 24; i++) {
+      if (this.levelStars[i]) totalStars += this.levelStars[i];
+    }
+    if (totalStars === 0 && this.unlockedLevels > 1) {
+      totalStars = (this.unlockedLevels - 1) * 3;
+    }
+    const starsEl = document.getElementById('dash-stars-earned');
+    if (starsEl) starsEl.textContent = `${totalStars} / 72`;
+
+    const currentName = (this.playerName || "Devotee").toLowerCase();
+    let playerRank = 1;
+    if (this.leaderboardData && this.leaderboardData.length > 0) {
+      const foundRankIdx = this.leaderboardData.findIndex(item => item.name.toLowerCase() === currentName);
+      if (foundRankIdx >= 0) playerRank = foundRankIdx + 1;
+    }
+    const rankEl = document.getElementById('dash-leaderboard-rank');
+    if (rankEl) rankEl.textContent = `#${playerRank}`;
+
+    const chapEl = document.getElementById('dash-highest-chapter');
+    if (chapEl) chapEl.textContent = this.getHighestChapterName();
+  }
+
+  openProfileDashboard() {
+    sounds.playClick();
+    this.updateProfileDashboardUI();
+    document.getElementById('settings-modal').classList.add('hidden');
+    document.getElementById('player-profile-modal').classList.add('hidden');
+    document.getElementById('leaderboard-modal').classList.add('hidden');
+    document.getElementById('profile-dashboard-modal').classList.remove('hidden');
+    this.inModal = true;
+  }
+
+  loadLeaderboard() {
+    const defaultLeaderboard = [
+      { name: "Sri Rama", avatar: "🕉️", level: 24, stars: 72, score: 35400 },
+      { name: "Bhakta Prahlada", avatar: "🌺", level: 24, stars: 70, score: 32800 },
+      { name: "Arjuna", avatar: "🏹", level: 22, stars: 64, score: 28500 },
+      { name: "Dhruva", avatar: "⭐", level: 20, stars: 58, score: 25200 },
+      { name: "Markandeya", avatar: "🔱", level: 18, stars: 52, score: 22400 },
+      { name: "Harishchandra", avatar: "🪔", level: 16, stars: 46, score: 19800 },
+      { name: "Hanuman", avatar: "🚩", level: 15, stars: 44, score: 18200 },
+      { name: "Vibhishana", avatar: "🐚", level: 12, stars: 34, score: 14500 },
+      { name: "Shabari", avatar: "🍓", level: 10, stars: 28, score: 11200 },
+      { name: "Sudama", avatar: "🌾", level: 8, stars: 22, score: 8600 }
+    ];
+
+    try {
+      const raw = localStorage.getItem('ganesha_leaderboard');
+      if (raw) {
+        this.leaderboardData = JSON.parse(raw);
+        if (!Array.isArray(this.leaderboardData) || this.leaderboardData.length === 0) {
+          this.leaderboardData = defaultLeaderboard;
+        }
+      } else {
+        this.leaderboardData = defaultLeaderboard;
+      }
+    } catch (e) {
+      console.warn("Could not load leaderboard from localStorage:", e);
+      this.leaderboardData = defaultLeaderboard;
+    }
+  }
+
+  saveLeaderboard() {
+    try {
+      localStorage.setItem('ganesha_leaderboard', JSON.stringify(this.leaderboardData));
+    } catch (e) {
+      console.warn("Could not save leaderboard to localStorage:", e);
+    }
+  }
+
+  recordLeaderboardScore() {
+    let totalStars = 0;
+    for (let i = 0; i < 24; i++) {
+      if (this.levelStars[i]) totalStars += this.levelStars[i];
+    }
+    if (totalStars === 0 && this.unlockedLevels > 1) {
+      totalStars = (this.unlockedLevels - 1) * 3;
+    }
+
+    if (!this.leaderboardData || !Array.isArray(this.leaderboardData)) {
+      this.loadLeaderboard();
+    }
+
+    const currentName = this.playerName || "Devotee";
+    const existingIndex = this.leaderboardData.findIndex(item => item.name.toLowerCase() === currentName.toLowerCase());
+
+    const playerEntry = {
+      name: currentName,
+      avatar: this.playerAvatar || "🐘",
+      level: Math.min(24, Math.max(1, this.unlockedLevels)),
+      stars: Math.min(72, totalStars),
+      score: Math.max(0, this.score)
+    };
+
+    if (existingIndex >= 0) {
+      playerEntry.score = Math.max(this.leaderboardData[existingIndex].score, playerEntry.score);
+      playerEntry.level = Math.max(this.leaderboardData[existingIndex].level, playerEntry.level);
+      playerEntry.stars = Math.max(this.leaderboardData[existingIndex].stars, playerEntry.stars);
+      this.leaderboardData[existingIndex] = playerEntry;
+    } else {
+      this.leaderboardData.push(playerEntry);
+    }
+
+    this.leaderboardData.sort((a, b) => b.score - a.score);
+    this.saveLeaderboard();
+  }
+
+  renderLeaderboard() {
+    this.recordLeaderboardScore();
+
+    const tbody = document.getElementById('leaderboard-tbody');
+    if (!tbody) return;
+
+    this.leaderboardData.sort((a, b) => b.score - a.score);
+
+    const currentName = (this.playerName || "Devotee").toLowerCase();
+    let playerRank = 1;
+    const foundRankIdx = this.leaderboardData.findIndex(item => item.name.toLowerCase() === currentName);
+    if (foundRankIdx >= 0) {
+      playerRank = foundRankIdx + 1;
+    }
+
+    const rankDisplay = document.getElementById('player-rank-display');
+    if (rankDisplay) rankDisplay.textContent = `#${playerRank}`;
+
+    const scoreDisplay = document.getElementById('player-score-display');
+    if (scoreDisplay) scoreDisplay.textContent = this.score.toLocaleString();
+
+    const bannerAvatar = document.getElementById('banner-player-avatar');
+    if (bannerAvatar) bannerAvatar.textContent = this.playerAvatar;
+
+    const bannerName = document.getElementById('banner-player-name');
+    if (bannerName) bannerName.textContent = this.playerName;
+
+    const top10 = this.leaderboardData.slice(0, 10);
+    tbody.innerHTML = '';
+
+    top10.forEach((item, idx) => {
+      const rank = idx + 1;
+      let medal = '';
+      if (rank === 1) medal = '🥇 ';
+      else if (rank === 2) medal = '🥈 ';
+      else if (rank === 3) medal = '🥉 ';
+
+      const isCurrent = item.name.toLowerCase() === currentName;
+      const tr = document.createElement('tr');
+      if (isCurrent) tr.className = 'is-current-player';
+
+      tr.innerHTML = `
+        <td class="col-rank">${medal}${rank}</td>
+        <td class="col-player">${item.avatar || '🐘'} ${item.name}</td>
+        <td class="col-level">${item.level} / 24</td>
+        <td class="col-stars">⭐ ${item.stars}</td>
+        <td class="col-score">${item.score.toLocaleString()}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  initWelcomeParticles() {
+    if (this.welcomeParticlesInitialized) return;
+    const canvas = document.getElementById('welcomeParticlesCanvas');
+    if (!canvas) return;
+    this.welcomeParticlesInitialized = true;
+    const ctx = canvas.getContext('2d');
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    const particles = [];
+    const colors = ['#ffd700', '#ffb300', '#ff8f00', '#fff9c4', '#ffffff', '#e040fb'];
+    const count = 50;
+
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        radius: Math.random() * 2.8 + 1,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        vy: -(Math.random() * 0.8 + 0.3),
+        vx: (Math.random() - 0.5) * 0.6,
+        alpha: Math.random() * 0.7 + 0.3,
+        pulse: Math.random() * Math.PI * 2
+      });
+    }
+
+    const animate = () => {
+      const welcome = document.getElementById('welcome-screen');
+      if (welcome && !welcome.classList.contains('hidden')) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (let p of particles) {
+          p.y += p.vy;
+          p.x += p.vx + Math.sin(p.pulse) * 0.35;
+          p.pulse += 0.03;
+
+          if (p.y < -10) {
+            p.y = canvas.height + 10;
+            p.x = Math.random() * canvas.width;
+          }
+
+          ctx.save();
+          ctx.globalAlpha = p.alpha * (0.6 + 0.4 * Math.sin(p.pulse));
+          ctx.fillStyle = p.color;
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = 10;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+      requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
+  }
+
+  initIntroParticles() {
+    if (this.introParticlesInitialized) return;
+    const canvas = document.getElementById('introParticlesCanvas');
+    if (!canvas) return;
+    this.introParticlesInitialized = true;
+    const ctx = canvas.getContext('2d');
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    const particles = [];
+    const colors = ['#ffd700', '#ffb300', '#ff8f00', '#fff9c4', '#ffffff', '#e040fb', '#00e5ff'];
+    const count = 60;
+
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        radius: Math.random() * 2.6 + 1.2,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        vy: -(Math.random() * 0.75 + 0.25),
+        vx: (Math.random() - 0.5) * 0.5,
+        alpha: Math.random() * 0.8 + 0.2,
+        pulse: Math.random() * Math.PI * 2
+      });
+    }
+
+    const animate = () => {
+      const intro = document.getElementById('cinematic-intro-screen');
+      if (intro && !intro.classList.contains('hidden') && !intro.classList.contains('intro-fading')) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (let p of particles) {
+          p.y += p.vy;
+          p.x += p.vx + Math.sin(p.pulse) * 0.3;
+          p.pulse += 0.025;
+
+          if (p.y < -10) {
+            p.y = canvas.height + 10;
+            p.x = Math.random() * canvas.width;
+          }
+
+          ctx.save();
+          ctx.globalAlpha = p.alpha * (0.6 + 0.4 * Math.sin(p.pulse));
+          ctx.fillStyle = p.color;
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = 12;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+      if (!this.introFinished) {
+        requestAnimationFrame(animate);
+      }
+    };
+    requestAnimationFrame(animate);
+  }
+
+  playCinematicIntro() {
+    const intro = document.getElementById('cinematic-intro-screen');
+    if (!intro) return;
+
+    // Sequence Stage 1 (0.8s): Soft temple bell & warm temple light reveal
+    this.introTimers.push(setTimeout(() => {
+      if (intro && !this.introFinished) {
+        intro.classList.add('phase-reveal-temple');
+        sounds.playTempleBell(880);
+      }
+    }, 800));
+
+    // Sequence Stage 2 (2.2s): Divine center glow & radiance
+    this.introTimers.push(setTimeout(() => {
+      if (intro && !this.introFinished) {
+        intro.classList.add('phase-divine-glow');
+      }
+    }, 2200));
+
+    // Sequence Stage 3 (3.6s): Lord Vinayaka artwork reveal with cinematic camera push-in
+    this.introTimers.push(setTimeout(() => {
+      if (intro && !this.introFinished) {
+        intro.classList.add('phase-artwork-reveal');
+      }
+    }, 3600));
+
+    // Sequence Stage 4 (5.2s): “🙏 VINAYAKA 🙏” title reveal + high bell chime
+    this.introTimers.push(setTimeout(() => {
+      if (intro && !this.introFinished) {
+        intro.classList.add('phase-title-reveal');
+        sounds.playTempleBell(1174.66);
+      }
+    }, 5200));
+
+    // Sequence Stage 5 (6.8s): “THE DIVINE ADVENTURE” subtitle + musical rise
+    this.introTimers.push(setTimeout(() => {
+      if (intro && !this.introFinished) {
+        intro.classList.add('phase-adventure-reveal');
+        sounds.ensureMusicPlaying();
+      }
+    }, 6800));
+
+    // Sequence Stage 6 (8.4s): “A Divine Journey Begins…” phrase
+    this.introTimers.push(setTimeout(() => {
+      if (intro && !this.introFinished) {
+        intro.classList.add('phase-begins-reveal');
+      }
+    }, 8400));
+
+    // Sequence Stage 7 (10.6s): Smooth fade into the Welcome Screen
+    this.introTimers.push(setTimeout(() => {
+      this.finishCinematicIntro();
+    }, 10600));
+  }
+
+  finishCinematicIntro() {
+    if (this.introFinished) return;
+    this.introFinished = true;
+    for (const t of this.introTimers) clearTimeout(t);
+    this.introTimers = [];
+
+    sounds.init();
+    sounds.ensureMusicPlaying();
+
+    const intro = document.getElementById('cinematic-intro-screen');
+    const welcomeScreen = document.getElementById('welcome-screen');
+
+    if (intro) {
+      intro.classList.add('intro-fading');
+      setTimeout(() => {
+        intro.classList.add('hidden');
+        if (welcomeScreen) {
+          welcomeScreen.classList.remove('hidden');
+        }
+      }, 950);
+    } else if (welcomeScreen) {
+      welcomeScreen.classList.remove('hidden');
+    }
+  }
+
   bindUI() {
+    // Cinematic Intro Skip Button & Tap to Skip
+    const btnSkipIntro = document.getElementById('btn-skip-intro');
+    if (btnSkipIntro) {
+      btnSkipIntro.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.finishCinematicIntro();
+      });
+    }
+
+    const introScreen = document.getElementById('cinematic-intro-screen');
+    if (introScreen) {
+      introScreen.addEventListener('click', (e) => {
+        if (e.target && e.target.id === 'btn-skip-intro') return;
+        sounds.init();
+        sounds.ensureMusicPlaying();
+      });
+    }
+
     // Sound (SFX) Toggles
     const btnSound = document.getElementById('btn-sound');
     if (btnSound) {
@@ -3119,6 +5714,8 @@ class GameEngine {
 
     document.getElementById('btn-next-level').addEventListener('click', () => {
       document.getElementById('level-complete-modal').classList.add('hidden');
+      this.inModal = false;
+      this.isPaused = false;
       if (this.currentLevelIndex + 1 < LEVEL_CONFIGS.length) {
         this.loadLevel(this.currentLevelIndex + 1);
       }
@@ -3126,20 +5723,47 @@ class GameEngine {
 
     document.getElementById('btn-replay-level').addEventListener('click', () => {
       document.getElementById('level-complete-modal').classList.add('hidden');
+      this.inModal = false;
+      this.isPaused = false;
       this.loadLevel(this.currentLevelIndex);
     });
 
     document.getElementById('btn-restart-level').addEventListener('click', () => {
       document.getElementById('pause-modal').classList.add('hidden');
+      this.inModal = false;
       this.isPaused = false;
       this.loadLevel(this.currentLevelIndex);
     });
 
-    document.getElementById('btn-retry').addEventListener('click', () => {
-      document.getElementById('game-over-modal').classList.add('hidden');
-      this.inModal = false;
-      this.loadLevel(this.currentLevelIndex);
-    });
+    const btnRetry = document.getElementById('btn-retry');
+    if (btnRetry) {
+      btnRetry.addEventListener('click', () => {
+        document.getElementById('game-over-modal').classList.add('hidden');
+        this.inModal = false;
+        this.isPaused = false;
+        this.loadLevel(this.currentLevelIndex);
+      });
+    }
+
+    const btnRestartFail = document.getElementById('btn-restart-from-fail');
+    if (btnRestartFail) {
+      btnRestartFail.addEventListener('click', () => {
+        document.getElementById('game-over-modal').classList.add('hidden');
+        this.inModal = false;
+        this.isPaused = false;
+        this.loadLevel(this.currentLevelIndex);
+      });
+    }
+
+    const btnFailHome = document.getElementById('btn-fail-home');
+    if (btnFailHome) {
+      btnFailHome.addEventListener('click', () => {
+        document.getElementById('game-over-modal').classList.add('hidden');
+        this.inModal = false;
+        this.isPaused = false;
+        this.returnToMainMenu();
+      });
+    }
 
     // Level Select Modal
     const openLevelSelect = () => {
@@ -3163,6 +5787,7 @@ class GameEngine {
     document.getElementById('btn-close-level-select').addEventListener('click', () => {
       document.getElementById('level-select-modal').classList.add('hidden');
       this.inModal = false;
+      this.isPaused = false;
       const cfg = LEVEL_CONFIGS[this.currentLevelIndex];
       if (cfg.isRaceLevel || cfg.chapter === 3 || this.currentLevelIndex >= 16) {
         sounds.playTrack('chapter3');
@@ -3207,6 +5832,7 @@ class GameEngine {
     document.getElementById('btn-cutscene-next').addEventListener('click', () => {
       document.getElementById('cutscene-modal').classList.add('hidden');
       this.inModal = false;
+      this.isPaused = false;
       if (this.currentLevelIndex === 4 && this.boss && !this.boss.isAlive) {
         this.triggerLevelComplete();
       } else if (this.currentLevelIndex === 15 && this.boss && !this.boss.isAlive) {
@@ -3232,11 +5858,15 @@ class GameEngine {
     // Chapter 1 Celebration Buttons
     document.getElementById('btn-chapter-replay').addEventListener('click', () => {
       document.getElementById('chapter-complete-modal').classList.add('hidden');
+      this.inModal = false;
+      this.isPaused = false;
       this.loadLevel(0);
     });
 
     document.getElementById('btn-chapter-two').addEventListener('click', () => {
       document.getElementById('chapter-complete-modal').classList.add('hidden');
+      this.inModal = false;
+      this.isPaused = false;
       this.unlockedLevels = Math.max(this.unlockedLevels, 9);
       this.saveProgress();
       this.loadLevel(8);
@@ -3247,6 +5877,8 @@ class GameEngine {
     if (btnC2Replay) {
       btnC2Replay.addEventListener('click', () => {
         document.getElementById('chapter2-complete-modal').classList.add('hidden');
+        this.inModal = false;
+        this.isPaused = false;
         this.loadLevel(8);
       });
     }
@@ -3255,6 +5887,8 @@ class GameEngine {
     if (btnC1Replay) {
       btnC1Replay.addEventListener('click', () => {
         document.getElementById('chapter2-complete-modal').classList.add('hidden');
+        this.inModal = false;
+        this.isPaused = false;
         this.loadLevel(0);
       });
     }
@@ -3263,6 +5897,8 @@ class GameEngine {
     if (btnStartC3) {
       btnStartC3.addEventListener('click', () => {
         document.getElementById('chapter2-complete-modal').classList.add('hidden');
+        this.inModal = false;
+        this.isPaused = false;
         this.unlockedLevels = Math.max(this.unlockedLevels, 17);
         this.saveProgress();
         this.loadLevel(16); // Level 17 (index 16)
@@ -3274,6 +5910,8 @@ class GameEngine {
     if (btnC3Replay) {
       btnC3Replay.addEventListener('click', () => {
         document.getElementById('chapter3-complete-modal').classList.add('hidden');
+        this.inModal = false;
+        this.isPaused = false;
         this.loadLevel(16);
       });
     }
@@ -3298,14 +5936,372 @@ class GameEngine {
     }
 
     // ======================================================================
-    // MAIN MENU & NAVIGATION FLOW BINDINGS
+    // 🕉️ START SYSTEM: WELCOME SCREEN, DEVOTEE LOGIN & MENU BINDINGS
     // ======================================================================
-    const btnMenuStart = document.getElementById('btn-menu-start');
-    if (btnMenuStart) {
-      btnMenuStart.addEventListener('click', () => {
+    // 1. Welcome Screen Play Button
+    const btnWelcomePlay = document.getElementById('btn-welcome-play');
+    if (btnWelcomePlay) {
+      btnWelcomePlay.addEventListener('click', () => {
         sounds.init();
-        this.isInMainMenu = false;
-        this.openChapterSelect();
+        sounds.ensureMusicPlaying();
+        this.triggerVibrate(30);
+
+        const welcomeScreen = document.getElementById('welcome-screen');
+        if (welcomeScreen) welcomeScreen.classList.add('hidden');
+
+        // Check if player has ever saved their name in localStorage
+        const hasSavedName = localStorage.getItem('ganesha_player_name');
+        if (!hasSavedName || hasSavedName === 'Devotee') {
+          // First time player: show profile registration modal
+          const profileModal = document.getElementById('player-profile-modal');
+          if (profileModal) profileModal.classList.remove('hidden');
+          const cancelBtn = document.getElementById('btn-profile-cancel');
+          if (cancelBtn) cancelBtn.classList.add('hidden');
+          const nameInput = document.getElementById('player-name-input');
+          if (nameInput) {
+            nameInput.focus();
+            nameInput.select();
+          }
+        } else {
+          // Returning player: go straight to Main Menu
+          const mainMenu = document.getElementById('main-menu-overlay');
+          if (mainMenu) mainMenu.classList.remove('hidden');
+          sounds.playTrack('menu');
+        }
+      });
+    }
+
+    // Avatar Selection Chips in Profile Modal
+    document.querySelectorAll('.avatar-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('.avatar-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        this.playerAvatar = chip.getAttribute('data-avatar') || '🐘';
+        sounds.playClick();
+        this.triggerVibrate(20);
+      });
+    });
+
+    // Devotee Profile Continue / Save Button
+    const btnProfileContinue = document.getElementById('btn-profile-continue');
+    if (btnProfileContinue) {
+      btnProfileContinue.addEventListener('click', () => {
+        sounds.init();
+        this.triggerVibrate(35);
+        const input = document.getElementById('player-name-input');
+        const nameVal = input ? input.value.trim() : '';
+        const activeChip = document.querySelector('.avatar-chip.active');
+        const avatarVal = activeChip ? activeChip.getAttribute('data-avatar') : '🐘';
+
+        const chosenName = nameVal || 'Devotee';
+        this.saveProfile(chosenName, avatarVal);
+
+        const profileModal = document.getElementById('player-profile-modal');
+        if (profileModal) profileModal.classList.add('hidden');
+
+        if (this.isInMainMenu) {
+          const mainMenu = document.getElementById('main-menu-overlay');
+          if (mainMenu) mainMenu.classList.remove('hidden');
+          sounds.playTrack('menu');
+        }
+        sounds.playCollect();
+      });
+    }
+
+    // Devotee Profile Cancel Button
+    const btnProfileCancel = document.getElementById('btn-profile-cancel');
+    if (btnProfileCancel) {
+      btnProfileCancel.addEventListener('click', () => {
+        sounds.playClick();
+        document.getElementById('player-profile-modal').classList.add('hidden');
+        if (this.isInMainMenu) {
+          document.getElementById('main-menu-overlay').classList.remove('hidden');
+        }
+      });
+    }
+
+    const inputNameEl = document.getElementById('player-name-input');
+    if (inputNameEl) {
+      inputNameEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          const btnCont = document.getElementById('btn-profile-continue');
+          if (btnCont) btnCont.click();
+        }
+      });
+    }
+
+    // Edit Profile Modal Openers
+    const openProfileEditor = () => {
+      sounds.playClick();
+      this.triggerVibrate(20);
+      const input = document.getElementById('player-name-input');
+      if (input) input.value = this.playerName;
+      document.querySelectorAll('.avatar-chip').forEach(chip => {
+        if (chip.getAttribute('data-avatar') === this.playerAvatar) {
+          chip.classList.add('active');
+        } else {
+          chip.classList.remove('active');
+        }
+      });
+      const cancelBtn = document.getElementById('btn-profile-cancel');
+      if (cancelBtn) cancelBtn.classList.remove('hidden');
+      document.getElementById('settings-modal').classList.add('hidden');
+      document.getElementById('profile-dashboard-modal').classList.add('hidden');
+      const profileModal = document.getElementById('player-profile-modal');
+      if (profileModal) profileModal.classList.remove('hidden');
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    };
+
+    // Profile Dashboard Openers
+    const btnEditProfile = document.getElementById('btn-edit-profile');
+    if (btnEditProfile) btnEditProfile.addEventListener('click', () => this.openProfileDashboard());
+
+    const menuPlayerBar = document.getElementById('menu-player-bar');
+    if (menuPlayerBar) menuPlayerBar.addEventListener('click', () => this.openProfileDashboard());
+
+    const hudPlayerTag = document.getElementById('hud-player-tag');
+    if (hudPlayerTag) hudPlayerTag.addEventListener('click', () => this.openProfileDashboard());
+
+    const btnSettingsViewProf = document.getElementById('btn-settings-view-profile');
+    if (btnSettingsViewProf) btnSettingsViewProf.addEventListener('click', () => this.openProfileDashboard());
+
+    const btnSettingsRename = document.getElementById('btn-settings-rename');
+    if (btnSettingsRename) btnSettingsRename.addEventListener('click', openProfileEditor);
+
+    const btnDashEditProfile = document.getElementById('btn-dash-edit-profile');
+    if (btnDashEditProfile) btnDashEditProfile.addEventListener('click', openProfileEditor);
+
+    const btnCloseProfileDash = document.getElementById('btn-close-profile-dash');
+    if (btnCloseProfileDash) {
+      btnCloseProfileDash.addEventListener('click', () => {
+        sounds.playClick();
+        document.getElementById('profile-dashboard-modal').classList.add('hidden');
+        if (this.isInMainMenu) {
+          document.getElementById('main-menu-overlay').classList.remove('hidden');
+        }
+        this.inModal = false;
+      });
+    }
+
+    // Hero image & tap hint in main menu
+    const tapHint = document.getElementById('menu-tap-hint');
+    if (tapHint) {
+      tapHint.addEventListener('click', () => {
+        sounds.init();
+        sounds.ensureMusicPlaying();
+      });
+    }
+
+    const heroImg = document.getElementById('hero-ganesha-img');
+    if (heroImg) {
+      heroImg.addEventListener('click', () => {
+        sounds.init();
+        sounds.ensureMusicPlaying();
+      });
+    }
+
+    // Launch Game From Main Menu (Continue Game)
+    const launchGameFromMenu = () => {
+      sounds.init();
+      sounds.ensureMusicPlaying();
+      this.triggerVibrate(30);
+      this.isInMainMenu = false;
+      this.isPaused = false;
+      this.inModal = false;
+
+      // Hide all overlays
+      document.getElementById('main-menu-overlay').classList.add('hidden');
+      document.getElementById('welcome-screen').classList.add('hidden');
+      document.getElementById('player-profile-modal').classList.add('hidden');
+      document.getElementById('profile-dashboard-modal').classList.add('hidden');
+      document.getElementById('leaderboard-modal').classList.add('hidden');
+      document.getElementById('settings-modal').classList.add('hidden');
+      document.getElementById('reset-confirm-modal').classList.add('hidden');
+      document.getElementById('chapters-index-modal').classList.add('hidden');
+      document.getElementById('chapter-select-modal').classList.add('hidden');
+      document.getElementById('level-select-modal').classList.add('hidden');
+      document.getElementById('how-to-play-modal').classList.add('hidden');
+      document.getElementById('game-rules-modal').classList.add('hidden');
+
+      // Load active level
+      const lvlIdx = this.currentLevelIndex || 0;
+      this.loadLevel(lvlIdx);
+
+      // Show story introduction for the active level
+      const cfg = LEVEL_CONFIGS[lvlIdx];
+      if (cfg && !cfg.hasPreCutscene) {
+        this.showStoryPanel(cfg);
+      }
+    };
+
+    const btnMenuContinue = document.getElementById('btn-menu-continue');
+    if (btnMenuContinue) btnMenuContinue.addEventListener('click', launchGameFromMenu);
+    const btnMenuStart = document.getElementById('btn-menu-start');
+    if (btnMenuStart) btnMenuStart.addEventListener('click', launchGameFromMenu);
+
+    // Leaderboard Modal Open & Close
+    const btnMenuLeaderboard = document.getElementById('btn-menu-leaderboard');
+    if (btnMenuLeaderboard) {
+      btnMenuLeaderboard.addEventListener('click', () => {
+        sounds.init();
+        sounds.playClick();
+        this.triggerVibrate(20);
+        this.renderLeaderboard();
+        document.getElementById('main-menu-overlay').classList.add('hidden');
+        document.getElementById('leaderboard-modal').classList.remove('hidden');
+        this.inModal = true;
+      });
+    }
+
+    const btnCloseLeaderboard = document.getElementById('btn-close-leaderboard');
+    if (btnCloseLeaderboard) {
+      btnCloseLeaderboard.addEventListener('click', () => {
+        sounds.playClick();
+        document.getElementById('leaderboard-modal').classList.add('hidden');
+        document.getElementById('main-menu-overlay').classList.remove('hidden');
+        this.inModal = false;
+      });
+    }
+
+    // Settings Modal Open, Close & Controls
+    const updateSettingsModalUI = () => {
+      const musicBtn = document.getElementById('settings-music-btn');
+      if (musicBtn) {
+        musicBtn.textContent = sounds.musicEnabled ? "🔊 ON" : "🔇 OFF";
+        musicBtn.className = `settings-toggle-btn ${sounds.musicEnabled ? 'active' : 'inactive'}`;
+      }
+      const soundBtn = document.getElementById('settings-sound-btn');
+      if (soundBtn) {
+        soundBtn.textContent = sounds.sfxEnabled ? "🔔 ON" : "🔕 OFF";
+        soundBtn.className = `settings-toggle-btn ${sounds.sfxEnabled ? 'active' : 'inactive'}`;
+      }
+      const volSlider = document.getElementById('settings-volume-slider');
+      const volLabel = document.getElementById('settings-volume-label');
+      if (volSlider) {
+        const pct = Math.round(sounds.volume * 100);
+        volSlider.value = pct;
+        if (volLabel) volLabel.textContent = `Current: ${pct}%`;
+      }
+      const vibBtn = document.getElementById('settings-vibration-btn');
+      if (vibBtn) {
+        vibBtn.textContent = this.vibrationEnabled ? "📳 ON" : "📴 OFF";
+        vibBtn.className = `settings-toggle-btn ${this.vibrationEnabled ? 'active' : 'inactive'}`;
+      }
+    };
+
+    const btnMenuSettings = document.getElementById('btn-menu-settings');
+    if (btnMenuSettings) {
+      btnMenuSettings.addEventListener('click', () => {
+        sounds.init();
+        sounds.playClick();
+        this.triggerVibrate(20);
+        updateSettingsModalUI();
+        document.getElementById('main-menu-overlay').classList.add('hidden');
+        document.getElementById('settings-modal').classList.remove('hidden');
+        this.inModal = true;
+      });
+    }
+
+    const btnCloseSettings = document.getElementById('btn-close-settings');
+    if (btnCloseSettings) {
+      btnCloseSettings.addEventListener('click', () => {
+        sounds.playClick();
+        document.getElementById('settings-modal').classList.add('hidden');
+        if (this.isInMainMenu) {
+          document.getElementById('main-menu-overlay').classList.remove('hidden');
+        }
+        this.inModal = false;
+      });
+    }
+
+    const settingsMusicBtn = document.getElementById('settings-music-btn');
+    if (settingsMusicBtn) {
+      settingsMusicBtn.addEventListener('click', () => {
+        sounds.toggleMusic();
+        this.triggerVibrate(20);
+        updateSettingsModalUI();
+      });
+    }
+
+    const settingsSoundBtn = document.getElementById('settings-sound-btn');
+    if (settingsSoundBtn) {
+      settingsSoundBtn.addEventListener('click', () => {
+        sounds.toggleSound();
+        this.triggerVibrate(20);
+        updateSettingsModalUI();
+      });
+    }
+
+    const settingsVibBtn = document.getElementById('settings-vibration-btn');
+    if (settingsVibBtn) {
+      settingsVibBtn.addEventListener('click', () => {
+        this.vibrationEnabled = !this.vibrationEnabled;
+        this.saveSettings();
+        if (this.vibrationEnabled) {
+          this.triggerVibrate([40, 30, 40]);
+        }
+        sounds.playClick();
+        updateSettingsModalUI();
+      });
+    }
+
+    const settingsVolSlider = document.getElementById('settings-volume-slider');
+    if (settingsVolSlider) {
+      settingsVolSlider.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value) / 100;
+        sounds.setVolume(val);
+        const volLabel = document.getElementById('settings-volume-label');
+        if (volLabel) volLabel.textContent = `Current: ${Math.round(val * 100)}%`;
+      });
+    }
+
+    // Reset Progress Modal Dialog
+    const btnSettingsReset = document.getElementById('btn-settings-reset');
+    if (btnSettingsReset) {
+      btnSettingsReset.addEventListener('click', () => {
+        sounds.playClick();
+        this.triggerVibrate(40);
+        document.getElementById('settings-modal').classList.add('hidden');
+        document.getElementById('reset-confirm-modal').classList.remove('hidden');
+      });
+    }
+
+    const btnCancelReset = document.getElementById('btn-cancel-reset');
+    if (btnCancelReset) {
+      btnCancelReset.addEventListener('click', () => {
+        sounds.playClick();
+        document.getElementById('reset-confirm-modal').classList.add('hidden');
+        document.getElementById('settings-modal').classList.remove('hidden');
+      });
+    }
+
+    const btnConfirmReset = document.getElementById('btn-confirm-reset');
+    if (btnConfirmReset) {
+      btnConfirmReset.addEventListener('click', () => {
+        this.triggerVibrate([60, 40, 80]);
+        try {
+          localStorage.removeItem('ganesha_adventure_save');
+          localStorage.removeItem('ganesha_adventure_completed');
+        } catch (_) {}
+        this.unlockedLevels = 1;
+        this.score = 0;
+        this.levelStars = {};
+        this.saveProgress();
+        this.recordLeaderboardScore();
+        this.renderLeaderboard();
+        this.updateProfileUI();
+        this.updateProfileDashboardUI();
+        this.loadLevel(0);
+
+        document.getElementById('reset-confirm-modal').classList.add('hidden');
+        document.getElementById('settings-modal').classList.add('hidden');
+        document.getElementById('main-menu-overlay').classList.remove('hidden');
+        this.isInMainMenu = true;
+        this.inModal = false;
+        alert("🙏 Your adventure has been reset to Level 1. Embark on the sacred path afresh!");
       });
     }
 
@@ -3498,7 +6494,7 @@ class GameEngine {
     document.getElementById('chapters-index-modal').classList.remove('hidden');
     this.inModal = true;
     this.initChapterParticles();
-    sounds.playTrack('menu');
+    sounds.ensureMusicPlaying();
   }
 
   updateChaptersLockUI() {
@@ -3590,6 +6586,18 @@ class GameEngine {
     document.getElementById('cutscene-modal').classList.add('hidden');
     document.getElementById('game-over-modal').classList.add('hidden');
     document.getElementById('level-complete-modal').classList.add('hidden');
+    const lbModal = document.getElementById('leaderboard-modal');
+    if (lbModal) lbModal.classList.add('hidden');
+    const setModal = document.getElementById('settings-modal');
+    if (setModal) setModal.classList.add('hidden');
+    const resetModal = document.getElementById('reset-confirm-modal');
+    if (resetModal) resetModal.classList.add('hidden');
+    const profDash = document.getElementById('profile-dashboard-modal');
+    if (profDash) profDash.classList.add('hidden');
+    const profModal = document.getElementById('player-profile-modal');
+    if (profModal) profModal.classList.add('hidden');
+    const welcModal = document.getElementById('welcome-screen');
+    if (welcModal) welcModal.classList.add('hidden');
     const finalVic = document.getElementById('final-victory-modal');
     if (finalVic) finalVic.classList.add('hidden');
     const c1Comp = document.getElementById('chapter-complete-modal');
@@ -3602,6 +6610,8 @@ class GameEngine {
     this.isInMainMenu = true;
     this.inModal = false;
     this.isPaused = true;
+    this.updateProfileUI();
+    this.updateProfileDashboardUI();
   }
 
   initChapterParticles() {
@@ -3834,24 +6844,47 @@ class GameEngine {
 
   loadLevel(index) {
     this.currentLevelIndex = index;
+    this.isPaused = false;
+    this.inModal = false;
     const cfg = LEVEL_CONFIGS[index];
 
     this.levelScore = 0;
+    this.lives = 3;
+    this.updateLivesDisplay();
+    this.levelStartTime = Date.now();
     this.enemiesDefeated = 0;
     this.modaksCollected = 0;
     this.lotusOrbsCollected = 0;
     this.starsCollected = 0;
     this.coinsCollected = 0;
+    this.flowersCollected = 0;
+    this.crystalsCollected = 0;
     this.wisdomCollectedCount = 0;
+    this.bellsRungCount = 0;
+    this.keysCollected = 0;
+    this.divineSymbolsCollected = 0;
+    this.lotusSwitchesActive = 0;
     this.isCountingDown = false;
     this.checkpoint = { x: 60, y: 380 };
 
     this.player = new Player(60, 380);
     this.platforms = [...cfg.platforms];
-    this.enemies = cfg.enemies ? cfg.enemies.map(e => new Enemy(e.x, e.y, e.type)) : [];
+    this.movingPlatforms = cfg.movingPlatforms ? cfg.movingPlatforms.map(m => new MovingPlatform(m.x, m.y, m.width, m.height, m.moveX || 0, m.moveY || 0, m.speed || 0.03)) : [];
+    this.rivers = cfg.rivers ? cfg.rivers.map(r => new SacredRiver(r.x, r.y, r.width, r.height, r.type)) : [];
+    this.bells = cfg.bells ? cfg.bells.map(b => new TempleBell(b.x, b.y, b.id)) : [];
+    this.clouds = cfg.clouds ? cfg.clouds.map(c => new CloudPlatform(c.x, c.y, c.width, c.height)) : [];
+    this.keys = cfg.keys ? cfg.keys.map(k => new MagicalKey(k.x, k.y, k.id)) : [];
+    this.divineSymbols = cfg.divineSymbols ? cfg.divineSymbols.map(s => new DivineSymbol(s.x, s.y, s.symbolId, s.label)) : [];
+    this.traps = cfg.traps ? cfg.traps.map(t => new ObstacleTrap(t.x, t.y, t.width, t.height, t.type)) : [];
+    this.elephantGuardian = cfg.elephantGuardian ? new ElephantGuardian(cfg.elephantGuardian.x, cfg.elephantGuardian.y) : null;
+    this.enemies = cfg.enemies ? cfg.enemies.map(e => new Enemy(e.x, e.y, e.type, e.patrolMinX, e.patrolMaxX)) : [];
 
     if (cfg.boss) {
-      if (cfg.bossType && cfg.bossType.startsWith('vighnasura')) {
+      if (cfg.bossType === 'asura_warlord') {
+        this.boss = new AsuraWarlordBoss(cfg.boss.x, cfg.boss.y, cfg.boss.maxHp || 380);
+      } else if (cfg.bossType === 'forest_guardian') {
+        this.boss = new ForestGuardianBoss(cfg.boss.x, cfg.boss.y, cfg.boss.maxHp || 400);
+      } else if (cfg.bossType && cfg.bossType.startsWith('vighnasura')) {
         this.boss = new VighnasuraBoss(cfg.boss.x, cfg.boss.y, cfg.boss.maxHp);
       } else {
         this.boss = new ShivaBoss(cfg.boss.x, cfg.boss.y);
@@ -4100,8 +7133,47 @@ class GameEngine {
 
   onEnemyDefeated(enemy) {
     this.enemiesDefeated++;
-    const bonus = (enemy.type === 'miniboss' || enemy.type === 'asura_chieftain') ? 300 : 75;
-    this.addScore(bonus);
+    let score = 80;
+    let coins = 1;
+
+    if (enemy.type === 'asura_grunt') {
+      score = 80; coins = 1;
+    } else if (enemy.type === 'asura_scout') {
+      score = 100; coins = 2;
+    } else if (enemy.type === 'asura_patrol') {
+      score = 120; coins = 2;
+    } else if (enemy.type === 'shadow_beast') {
+      score = 150; coins = 3;
+    } else if (enemy.type === 'corrupted_wisp') {
+      score = 140; coins = 2;
+    } else if (enemy.type === 'armored_asura') {
+      score = 250; coins = 5;
+    } else if (enemy.type === 'dark_sorcerer') {
+      score = 300; coins = 5;
+    } else if (enemy instanceof AsuraWarlordBoss || enemy.type === 'asura_warlord' || enemy.type === 'miniboss' || enemy.type === 'asura_chieftain') {
+      score = 1000; coins = 20;
+    }
+
+    this.addScore(score);
+    this.coinsCollected += coins;
+    sounds.playCoin();
+
+    // Floating text rewards
+    const ex = enemy.x + (enemy.width ? enemy.width / 2 : 20);
+    const ey = enemy.y;
+    this.particles.emitFloatingText(ex, ey - 12, `+${score} ⭐`, '#ffd700', 14);
+    this.particles.emitFloatingText(ex, ey + 8, `+${coins} 🪙`, '#ffb300', 13);
+    this.updateHUD();
+
+    // If Mini-Boss or Level 16 Boss is defeated, trigger Chapter 2 celebration
+    if (enemy instanceof AsuraWarlordBoss || enemy.type === 'asura_warlord' || (this.currentLevelIndex === 15 && (enemy.type === 'miniboss' || this.boss === enemy))) {
+      sounds.playVictory();
+      this.unlockedLevels = Math.max(this.unlockedLevels, 17);
+      this.saveProgress();
+      setTimeout(() => {
+        this.showChapter2Celebration();
+      }, 1200);
+    }
   }
 
   onShivaDuelComplete() {
@@ -4118,6 +7190,36 @@ class GameEngine {
     }
   }
 
+  onForestGuardianSoothed() {
+    sounds.playVictory();
+    this.addScore(1500);
+    this.triggerLevelComplete();
+  }
+
+  onBellRung(bellId) {
+    this.bellsRungCount++;
+    this.addScore(150);
+    const cfg = LEVEL_CONFIGS[this.currentLevelIndex];
+    if (cfg && cfg.requiredBells && this.bellsRungCount >= cfg.requiredBells) {
+      this.openGate(99);
+    }
+  }
+
+  onKeyCollected(keyId) {
+    this.keysCollected++;
+    this.addScore(200);
+    this.openGate(keyId);
+  }
+
+  onDivineSymbolCollected(symbolId) {
+    this.divineSymbolsCollected++;
+    this.addScore(300);
+    const cfg = LEVEL_CONFIGS[this.currentLevelIndex];
+    if (cfg && cfg.requiredSymbols && this.divineSymbolsCollected >= cfg.requiredSymbols) {
+      this.openGate(99);
+    }
+  }
+
   onDefenseTargetFailed() {
     this.onPlayerDefeated();
   }
@@ -4129,12 +7231,15 @@ class GameEngine {
     if (cfg.requiredOrbs && this.lotusOrbsCollected < cfg.requiredOrbs) return;
     if (cfg.requiredStars && this.starsCollected < cfg.requiredStars) return;
     if (cfg.requiredCoins && this.coinsCollected < cfg.requiredCoins) return;
+    if (cfg.requiredBells && this.bellsRungCount < cfg.requiredBells) return;
+    if (cfg.requiredKeys && this.keysCollected < cfg.requiredKeys) return;
+    if (cfg.requiredSymbols && this.divineSymbolsCollected < cfg.requiredSymbols) return;
 
     if (cfg.hasWisdomPuzzle && this.wisdomCollectedCount < 3) return;
 
     if (this.currentLevelIndex === 23) {
       // Level 24 finale cutscene
-      this.showCutscene("The Power of Wisdom", LEVEL_CONFIGS[23].cutsceneDialogue, 'wisdom_climax');
+      this.showCutscene("The Supreme Blessing", LEVEL_CONFIGS[23].cutsceneDialogue, 'wisdom_climax');
       return;
     }
 
@@ -4148,8 +7253,21 @@ class GameEngine {
 
     if (this.currentLevelIndex + 1 >= this.unlockedLevels) {
       this.unlockedLevels = Math.min(24, this.currentLevelIndex + 2);
-      this.saveProgress();
     }
+
+    // Calculate Stars (1 to 3 ⭐)
+    let stars = 1;
+    const totalCollectibles = (cfg.collectibles ? cfg.collectibles.length : 0);
+    const collectedItems = this.modaksCollected + this.coinsCollected + this.flowersCollected + this.starsCollected + this.crystalsCollected;
+    if (totalCollectibles > 0 && collectedItems >= Math.floor(totalCollectibles * 0.7)) {
+      stars = 2;
+    }
+    if (this.lives === 3 && (totalCollectibles === 0 || collectedItems >= Math.floor(totalCollectibles * 0.9))) {
+      stars = 3;
+    }
+    this.levelStars[this.currentLevelIndex] = Math.max(this.levelStars[this.currentLevelIndex] || 0, stars);
+    this.saveProgress();
+    this.recordLeaderboardScore();
 
     if (this.currentLevelIndex === 7) {
       this.showChapter1Celebration();
@@ -4166,10 +7284,52 @@ class GameEngine {
       return;
     }
 
-    document.getElementById('complete-modaks').textContent = this.modaksCollected;
-    document.getElementById('complete-enemies').textContent = this.enemiesDefeated;
-    document.getElementById('complete-score').textContent = this.levelScore;
-    document.getElementById('complete-story-text').textContent = cfg.completionStory;
+    // Populate Level Complete Modal
+    const starsEl = document.getElementById('complete-stars');
+    if (starsEl) {
+      starsEl.innerHTML = `
+        <span class="star-icon ${stars >= 1 ? 'active' : ''}">⭐</span>
+        <span class="star-icon ${stars >= 2 ? 'active' : ''}">⭐</span>
+        <span class="star-icon ${stars >= 3 ? 'active' : ''}">⭐</span>
+      `;
+    }
+
+    const elapsedSeconds = Math.max(1, Math.floor((Date.now() - this.levelStartTime) / 1000));
+    const timeEl = document.getElementById('complete-time');
+    if (timeEl) timeEl.textContent = `${elapsedSeconds}s`;
+
+    const livesEl = document.getElementById('complete-lives');
+    if (livesEl) livesEl.textContent = `${this.lives} / 3 ❤️`;
+
+    const compModaks = document.getElementById('complete-modaks');
+    if (compModaks) compModaks.textContent = this.modaksCollected;
+    const compEnemies = document.getElementById('complete-enemies');
+    if (compEnemies) compEnemies.textContent = this.enemiesDefeated;
+    const compScore = document.getElementById('complete-score');
+    if (compScore) compScore.textContent = this.levelScore;
+    const compStory = document.getElementById('complete-story-text');
+    if (compStory) compStory.textContent = cfg.completionStory;
+
+    const badgesEl = document.getElementById('complete-badges');
+    if (badgesEl) {
+      let badgeList = [];
+      if (this.lives === 3) badgeList.push('<span class="achievement-badge">🛡️ Flawless Protection</span>');
+      if (this.modaksCollected >= 10 || (totalCollectibles > 0 && this.modaksCollected === totalCollectibles)) badgeList.push('<span class="achievement-badge">🍬 Modak Devotee</span>');
+      if (stars === 3) badgeList.push('<span class="achievement-badge">🌟 Divine Mastery</span>');
+      if (elapsedSeconds < 45) badgeList.push('<span class="achievement-badge">⚡ Swift Blessings</span>');
+      badgesEl.innerHTML = badgeList.join('');
+    }
+
+    const unlAnnounce = document.getElementById('complete-unlocked-msg') || document.getElementById('unlocked-level-announcement');
+    if (unlAnnounce) {
+      if (this.currentLevelIndex + 1 < 24) {
+        unlAnnounce.textContent = `🕉️ Level ${this.currentLevelIndex + 2} Unlocked!`;
+        unlAnnounce.classList.remove('hidden');
+      } else {
+        unlAnnounce.textContent = `✨ All Divine Levels Mastered!`;
+        unlAnnounce.classList.remove('hidden');
+      }
+    }
 
     document.getElementById('level-complete-modal').classList.remove('hidden');
     this.inModal = true;
@@ -4183,8 +7343,18 @@ class GameEngine {
       localStorage.setItem('ganesha_adventure_completed', 'true');
     } catch (_) {}
 
+    let totalStars = 0;
+    for (let i = 0; i < 24; i++) {
+      totalStars += (this.levelStars[i] || 3);
+    }
+    const finalStarsEl = document.getElementById('final-victory-stars') || document.getElementById('final-total-stars');
+    if (finalStarsEl) finalStarsEl.textContent = `${Math.min(72, totalStars)} / 72`;
+
     const totalScoreEl = document.getElementById('final-victory-score');
     if (totalScoreEl) totalScoreEl.textContent = this.score.toLocaleString();
+
+    const totalModaksEl = document.getElementById('final-victory-modaks') || document.getElementById('final-total-modaks');
+    if (totalModaksEl) totalModaksEl.textContent = (this.modaksCollected + 144).toLocaleString();
 
     document.getElementById('level-complete-modal').classList.add('hidden');
     document.getElementById('chapter3-complete-modal').classList.add('hidden');
@@ -4383,9 +7553,16 @@ class GameEngine {
         badgeHtml = '<span class="tile-badge locked">🔒 Locked</span>';
       }
 
+      const starsForLevel = this.levelStars[idx] || (isCompleted ? 3 : 0);
+      let starsHtml = '';
+      if (isUnlocked && starsForLevel > 0) {
+        starsHtml = `<div class="tile-stars" style="color: #ffd700; font-size: 13px; margin: 2px 0;">${'⭐'.repeat(starsForLevel)}</div>`;
+      }
+
       tile.innerHTML = `
         <span class="tile-number">${isUnlocked ? '🕉️ Level ' + cfg.levelNum : '🔒 Level ' + cfg.levelNum}</span>
         <span class="tile-title">${cfg.title}</span>
+        ${starsHtml}
         ${badgeHtml}
       `;
 
@@ -4405,6 +7582,20 @@ class GameEngine {
     this.checkpoint = { x, y };
   }
 
+  updateLivesDisplay() {
+    const heartsEl = document.getElementById('lives-display') || document.getElementById('lives-hearts');
+    if (!heartsEl) return;
+    let heartsHtml = '';
+    for (let i = 0; i < this.maxLives; i++) {
+      if (i < this.lives) {
+        heartsHtml += '<span class="heart-icon active">❤️</span>';
+      } else {
+        heartsHtml += '<span class="heart-icon lost">🖤</span>';
+      }
+    }
+    heartsEl.innerHTML = heartsHtml;
+  }
+
   respawnPlayer() {
     this.player.x = this.checkpoint.x;
     this.player.y = this.checkpoint.y;
@@ -4412,11 +7603,40 @@ class GameEngine {
     this.player.vy = 0;
   }
 
-  onPlayerDefeated() {
+  loseLife(reason = "Hazard") {
+    if (this.player.invulnerableTimer > 0) return;
+    this.lives = Math.max(0, this.lives - 1);
     sounds.playHit();
+    this.updateLivesDisplay();
+    const heartsEl = document.getElementById('lives-display') || document.getElementById('lives-hearts');
+    if (heartsEl) {
+      heartsEl.classList.add('hurt');
+      setTimeout(() => heartsEl.classList.remove('hurt'), 600);
+    }
+    this.particles.emitSparks(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2, 20, '#ff5252');
+
+    if (this.lives <= 0) {
+      this.onGameOver(reason);
+    } else {
+      this.respawnPlayer();
+      this.player.invulnerableTimer = 90;
+      this.player.health = this.player.maxHealth;
+    }
+  }
+
+  onGameOver(reason = "Hazard") {
+    sounds.playGameOver();
     sounds.playTrack('gameover');
+    const descEl = document.getElementById('game-over-desc') || document.querySelector('#game-over-modal .fail-desc');
+    if (descEl) {
+      descEl.textContent = `Lord Ganesha encountered ${reason}. Keep your faith and try again!`;
+    }
     document.getElementById('game-over-modal').classList.remove('hidden');
     this.inModal = true;
+  }
+
+  onPlayerDefeated() {
+    this.loseLife("Trial Failed");
   }
 
   restartLevel() {
@@ -4454,6 +7674,7 @@ class GameEngine {
     this.score += pts;
     this.levelScore += pts;
     this.saveProgress();
+    this.recordLeaderboardScore();
     this.updateHUD();
   }
 
@@ -4470,7 +7691,14 @@ class GameEngine {
       document.getElementById('defense-text').textContent = `${Math.ceil(this.defenseTarget.health)} / 100`;
     }
 
-    document.getElementById('score-text').textContent = this.score;
+    const scoreEl = document.getElementById('score-text');
+    if (scoreEl) scoreEl.textContent = this.score;
+
+    const coinsEl = document.getElementById('coins-text');
+    if (coinsEl) coinsEl.textContent = this.coinsCollected;
+
+    const modaksEl = document.getElementById('modaks-text');
+    if (modaksEl) modaksEl.textContent = this.modaksCollected;
 
     // Race HUD update
     const cfg = LEVEL_CONFIGS[this.currentLevelIndex];
@@ -4499,21 +7727,63 @@ class GameEngine {
   }
 
   update() {
-    const activePlats = [...this.platforms, ...this.gates];
+    // 1. Update moving platforms first so dx/dy are current
+    for (const mp of this.movingPlatforms) {
+      mp.update();
+    }
+
+    // 2. Combine active solid surfaces: platforms, moving platforms, cloud platforms, gates
+    const activePlats = [...this.platforms, ...this.movingPlatforms, ...this.clouds, ...this.gates];
     this.player.update(this.input, activePlats, this.particles);
 
-    if (this.player.isAttacking && !this.player.hasHitCurrentAttack) {
+    // 3. Sacred River water hazards
+    for (const river of this.rivers) {
+      river.update(this.player, this.particles);
+    }
+
+    // 4. Cloud floating animation
+    for (const cloud of this.clouds) {
+      cloud.update();
+    }
+
+    // 5. Temple Bells
+    for (const bell of this.bells) {
+      bell.update(this.player, this.particles);
+    }
+
+    // 6. Magical Keys
+    for (const key of this.keys) {
+      key.update(this.player, this.particles);
+    }
+
+    // 7. Divine Symbols
+    for (const sym of this.divineSymbols) {
+      sym.update(this.player, this.particles);
+    }
+
+    // 8. Obstacle Traps
+    for (const trap of this.traps) {
+      trap.update(this.player, this.particles);
+    }
+
+    // 9. Friendly Elephant Guardian
+    if (this.elephantGuardian) {
+      this.elephantGuardian.update(this.player, this.particles);
+    }
+
+    // 10. Attack Hitbox Checks
+    if (this.player.isAttacking) {
       const hb = this.player.attackHitbox;
 
       for (const enemy of this.enemies) {
-        if (enemy.isAlive && enemy.collidesWith(hb)) {
-          enemy.takeHit(24, this.particles);
+        if (enemy.isAlive && !this.player.hitEnemiesThisSwing.has(enemy) && enemy.collidesWith(hb)) {
+          enemy.takeHit(28, this.particles);
           enemy.vx = this.player.facing * 4;
-          this.player.hasHitCurrentAttack = true;
+          this.player.hitEnemiesThisSwing.add(enemy);
         }
       }
 
-      if (this.boss && this.boss.isAlive && this.boss.hitTimer <= 0) {
+      if (this.boss && this.boss.isAlive && !this.player.hitEnemiesThisSwing.has(this.boss) && this.boss.hitTimer <= 0) {
         if (
           hb.x < this.boss.x + this.boss.width &&
           hb.x + hb.width > this.boss.x &&
@@ -4521,7 +7791,7 @@ class GameEngine {
           hb.y + hb.height > this.boss.y
         ) {
           this.boss.takeHit(18, this.particles);
-          this.player.hasHitCurrentAttack = true;
+          this.player.hitEnemiesThisSwing.add(this.boss);
         }
       }
     }
@@ -4589,6 +7859,11 @@ class GameEngine {
     // Parallax Background
     this.bg.draw(ctx, this.cameraX, cfg.theme);
 
+    // Sacred Rivers (rendered behind/under bridges & platforms)
+    for (const river of this.rivers) {
+      river.draw(ctx, this.cameraX);
+    }
+
     // Platforms
     ctx.save();
     for (const plat of this.platforms) {
@@ -4644,6 +7919,21 @@ class GameEngine {
     }
     ctx.restore();
 
+    // Moving Platforms
+    for (const mp of this.movingPlatforms) {
+      mp.draw(ctx, this.cameraX, cfg.theme);
+    }
+
+    // Cloud Platforms
+    for (const cloud of this.clouds) {
+      cloud.draw(ctx, this.cameraX);
+    }
+
+    // Obstacle Traps (Spikes, Thorns, Chakras)
+    for (const trap of this.traps) {
+      trap.draw(ctx, this.cameraX);
+    }
+
     // Speed Boost Pads
     for (const pad of this.boostPads) {
       pad.draw(ctx, this.cameraX);
@@ -4665,6 +7955,26 @@ class GameEngine {
     }
     for (const sw of this.switches) {
       sw.draw(ctx, this.cameraX);
+    }
+
+    // Elephant Guardian (Friendly)
+    if (this.elephantGuardian) {
+      this.elephantGuardian.draw(ctx, this.cameraX);
+    }
+
+    // Temple Bells
+    for (const bell of this.bells) {
+      bell.draw(ctx, this.cameraX);
+    }
+
+    // Magical Keys
+    for (const key of this.keys) {
+      key.draw(ctx, this.cameraX);
+    }
+
+    // Divine Symbols (Level 23)
+    for (const sym of this.divineSymbols) {
+      sym.draw(ctx, this.cameraX);
     }
 
     // Defense Target
@@ -4702,7 +8012,7 @@ class GameEngine {
       proj.draw(ctx, this.cameraX);
     }
 
-    // Player
+    // Player (Cute Lord Ganesha)
     this.player.draw(ctx, this.cameraX);
 
     // Particle Effects
