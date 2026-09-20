@@ -6566,6 +6566,47 @@ class GameEngine {
       });
     }
 
+    // Daily Divine Reward Modal Openers & Actions
+    const btnMenuDailyReward = document.getElementById('btn-menu-daily-reward');
+    if (btnMenuDailyReward) {
+      btnMenuDailyReward.addEventListener('click', () => this.openDailyRewardModal());
+    }
+
+    const btnDashDailyReward = document.getElementById('btn-dash-daily-reward');
+    if (btnDashDailyReward) {
+      btnDashDailyReward.addEventListener('click', () => this.openDailyRewardModal());
+    }
+
+    const btnHudDailyReward = document.getElementById('btn-hud-daily-reward');
+    if (btnHudDailyReward) {
+      btnHudDailyReward.addEventListener('click', () => this.openDailyRewardModal());
+    }
+
+    const btnCloseDailyReward = document.getElementById('btn-close-daily-reward');
+    if (btnCloseDailyReward) {
+      btnCloseDailyReward.addEventListener('click', () => {
+        sounds.playClick();
+        document.getElementById('daily-reward-modal').classList.add('hidden');
+        if (this.isInMainMenu) {
+          document.getElementById('main-menu-overlay').classList.remove('hidden');
+        }
+        this.inModal = false;
+      });
+    }
+
+    const btnClaimDailyReward = document.getElementById('btn-claim-daily-reward');
+    if (btnClaimDailyReward) {
+      btnClaimDailyReward.addEventListener('click', () => this.claimDailyReward());
+    }
+
+    const btnCollectRewardAck = document.getElementById('btn-collect-reward-ack');
+    if (btnCollectRewardAck) {
+      btnCollectRewardAck.addEventListener('click', () => {
+        sounds.playClick();
+        document.getElementById('reward-celebration-modal').classList.add('hidden');
+      });
+    }
+
     // Hero image & tap hint in main menu
     const tapHint = document.getElementById('menu-tap-hint');
     if (tapHint) {
