@@ -20,6 +20,140 @@
 'use strict';
 
 // ==========================================================================
+// 👑 DIVINE AVATARS & SKINS PALETTE DEFINITIONS
+// ==========================================================================
+const DIVINE_SKINS = {
+  classic: {
+    id: 'classic',
+    name: 'Bal Ganesha',
+    tag: '🌟 Sacred Form',
+    tierClass: 'tier-classic',
+    icon: '🪔',
+    desc: 'The beloved auspicious form of Lord Ganesha adorned with fragrant flowers, golden pitambara silk, and a celestial modak.',
+    perk: 'Aura: Sacred Golden Light & Spark Trail',
+    costType: 'free',
+    cost: 0,
+    palette: {
+      skin: '#ffd54f',
+      head: '#ffe082',
+      cheeks: 'rgba(255, 128, 171, 0.45)',
+      earInner: '#f8bbd0',
+      dhoti: '#ff9800',
+      dhotiHem: '#ffd700',
+      dhotiSash: '#ffd700',
+      feet: '#ffb300',
+      aura: 'rgba(255, 215, 0, 0.25)',
+      auraStroke: 'rgba(255, 215, 0, 0.65)',
+      crown: '#ffd700',
+      crownStroke: '#ff8f00',
+      gem: '#d50000',
+      necklace: '#ffd700',
+      weaponStaff: '#795548',
+      weaponHead: '#ffd700',
+      weaponStroke: '#ff6f00',
+      weaponType: 'axe',
+      trailParticleColor: '#ffd700'
+    }
+  },
+  vira: {
+    id: 'vira',
+    name: 'Vira Ganesha',
+    tag: '⚔️ Warrior Form',
+    tierClass: 'tier-warrior',
+    icon: '⚔️',
+    desc: 'The invincible warrior aspect armed with the fiery celestial Parashu axe, ruby battle armlets, and glowing armor.',
+    perk: 'Aura: Crimson Flame & Glowing Ember Trail',
+    costType: 'coins_or_ch1',
+    cost: 500,
+    palette: {
+      skin: '#ffb74d',
+      head: '#ffcc80',
+      cheeks: 'rgba(255, 110, 64, 0.5)',
+      earInner: '#ffab91',
+      dhoti: '#d50000',
+      dhotiHem: '#ffab00',
+      dhotiSash: '#b71c1c',
+      feet: '#e65100',
+      aura: 'rgba(255, 87, 34, 0.35)',
+      auraStroke: '#ff3d00',
+      crown: '#ffab00',
+      crownStroke: '#b71c1c',
+      gem: '#00e5ff',
+      necklace: '#ff9100',
+      weaponStaff: '#3e2723',
+      weaponHead: '#ff3d00',
+      weaponStroke: '#ffd600',
+      weaponType: 'flaming_axe',
+      trailParticleColor: '#ff5722'
+    }
+  },
+  suvarna: {
+    id: 'suvarna',
+    name: 'Suvarna Ganesha',
+    tag: '👑 Radiant Gold',
+    tierClass: 'tier-radiant',
+    icon: '👑',
+    desc: 'The pure divine golden murti radiating solar brilliance, adorned with celestial emeralds and blessed lotus motes.',
+    perk: 'Aura: Suvarna Light & Floating Lotus Petals',
+    costType: 'coins_or_day7',
+    cost: 1000,
+    palette: {
+      skin: '#ffe082',
+      head: '#fff59d',
+      cheeks: 'rgba(255, 238, 88, 0.55)',
+      earInner: '#ffe57f',
+      dhoti: '#ffd700',
+      dhotiHem: '#fff9c4',
+      dhotiSash: '#ff8f00',
+      feet: '#ffd54f',
+      aura: 'rgba(255, 235, 59, 0.45)',
+      auraStroke: '#ffffff',
+      crown: '#fff59d',
+      crownStroke: '#ffd700',
+      gem: '#00e676',
+      necklace: '#ffffff',
+      weaponStaff: '#ffb300',
+      weaponHead: '#fff9c4',
+      weaponStroke: '#ffd700',
+      weaponType: 'lotus_axe',
+      trailParticleColor: '#fff59d'
+    }
+  },
+  panchamukha: {
+    id: 'panchamukha',
+    name: 'Panchamukha Ganesha',
+    tag: '🌌 Cosmic Supreme',
+    tierClass: 'tier-cosmic',
+    icon: '🌌',
+    desc: 'The supreme five-element deity channeling Shiva and Shakti with the sacred Trishula and cosmic stardust aura.',
+    perk: 'Aura: Cosmic Rainbow Halo & Stardust Trail',
+    costType: 'coins_or_stars',
+    cost: 2000,
+    palette: {
+      skin: '#ce93d8',
+      head: '#e1bee7',
+      cheeks: 'rgba(224, 64, 251, 0.45)',
+      earInner: '#f48fb1',
+      dhoti: '#7b1fa2',
+      dhotiHem: '#e040fb',
+      dhotiSash: '#4a148c',
+      feet: '#ba68c8',
+      aura: 'rgba(171, 71, 188, 0.45)',
+      auraStroke: '#00e5ff',
+      crown: '#e040fb',
+      crownStroke: '#651fff',
+      gem: '#ffd700',
+      necklace: '#00e5ff',
+      weaponStaff: '#4a148c',
+      weaponHead: '#00e5ff',
+      weaponStroke: '#e040fb',
+      weaponType: 'trishul',
+      trailParticleColor: '#00e5ff'
+    }
+  }
+};
+
+// ==========================================================================
 // 1. AUDIO ENGINE (Multi-Track Background Music + Procedural SFX)
 // ==========================================================================
 // ==========================================================================
@@ -1949,11 +2083,21 @@ class Player {
       if (Math.abs(this.vx) < 0.2) this.vx = 0;
     }
 
+    // Dynamic Skin Footstep & Movement Particle Trails
+    if ((Math.abs(this.vx) > 1.2 || !this.isGrounded) && particles && Math.random() < 0.4) {
+      const sKey = (game && game.selectedSkin) || 'classic';
+      const sCfg = (game && game.divineSkins && game.divineSkins[sKey]) || DIVINE_SKINS.classic;
+      const trailCol = sCfg.palette.trailParticleColor || '#ffd700';
+      particles.emitSparks(this.x + this.width / 2 + (Math.random() * 10 - 5), this.y + this.height - 2, 1, trailCol);
+    }
+
     if (input.keys.jump && this.isGrounded) {
       this.vy = isRide ? -12.5 : this.jumpForce;
       this.isGrounded = false;
       sounds.playJump();
-      particles.emitSparks(this.x + this.width / 2, this.y + this.height, 6, '#ffd700');
+      const sKey = (game && game.selectedSkin) || 'classic';
+      const sCfg = (game && game.divineSkins && game.divineSkins[sKey]) || DIVINE_SKINS.classic;
+      particles.emitSparks(this.x + this.width / 2, this.y + this.height, 6, sCfg.palette.trailParticleColor);
     }
 
     // Normal Attack (Staff / Battle Axe Strike)
@@ -1994,9 +2138,10 @@ class Player {
     }
 
     // Gravity
-    this.vy += 0.55;
+    this.vy += 0.58;
     if (this.vy > 14) this.vy = 14;
 
+    // Movement & Collision
     this.x += this.vx;
     this.checkHorizontalCollisions(platforms);
 
@@ -2004,59 +2149,68 @@ class Player {
     this.isGrounded = false;
     this.checkVerticalCollisions(platforms);
 
-    // Ride with moving platform if standing on one
-    if (this.isGrounded && this.standingPlatform && this.standingPlatform.isMovingPlatform) {
-      this.x += this.standingPlatform.dx;
-      this.y += this.standingPlatform.dy;
-    }
-
-    if (this.x < 0) this.x = 0;
-    if (this.y > 640) {
-      game.loseLife("Fall into Abyss");
+    // World Bounds
+    if (this.y > 600) {
+      this.health = 0;
+      game.loseLife("Fell into the abyss");
     }
   }
 
   checkHorizontalCollisions(platforms) {
-    for (const plat of platforms) {
-      if (plat.isOpen) continue;
-      const box = plat.getCollisionBox ? plat.getCollisionBox() : plat;
-      if (this.collidesWith(box)) {
-        if (this.vx > 0) this.x = box.x - this.width;
-        else if (this.vx < 0) this.x = box.x + box.width;
-        this.vx = 0;
-      }
-    }
-  }
-
-  checkVerticalCollisions(platforms) {
-    this.standingPlatform = null;
-    for (const plat of platforms) {
-      if (plat.isOpen) continue;
-      const box = plat.getCollisionBox ? plat.getCollisionBox() : plat;
-      if (this.collidesWith(box)) {
-        if (this.vy > 0) {
-          this.y = box.y - this.height;
-          this.vy = 0;
-          this.isGrounded = true;
-          this.standingPlatform = plat;
-        } else if (this.vy < 0) {
-          this.y = box.y + box.height;
-          this.vy = 0;
+    for (const p of platforms) {
+      if (p.isPassable) continue;
+      if (this.x < p.x + p.w && this.x + this.width > p.x &&
+          this.y < p.y + p.h && this.y + this.height > p.y) {
+        if (this.vx > 0) {
+          this.x = p.x - this.width;
+          this.vx = 0;
+        } else if (this.vx < 0) {
+          this.x = p.x + p.w;
+          this.vx = 0;
         }
       }
     }
   }
 
-  collidesWith(box) {
-    return (
-      this.x < box.x + box.width &&
-      this.x + this.width > box.x &&
-      this.y < box.y + box.height &&
-      this.y + this.height > box.y
-    );
+  checkVerticalCollisions(platforms) {
+    for (const p of platforms) {
+      if (this.x + this.width > p.x && this.x < p.x + p.w) {
+        if (p.isOneWay) {
+          if (this.vy >= 0 && this.y + this.height >= p.y && this.y + this.height <= p.y + 16 && (this.y + this.height - this.vy) <= p.y + 4) {
+            this.y = p.y - this.height;
+            this.vy = 0;
+            this.isGrounded = true;
+          }
+        } else {
+          if (this.y < p.y + p.h && this.y + this.height > p.y) {
+            if (this.vy > 0) {
+              this.y = p.y - this.height;
+              this.vy = 0;
+              this.isGrounded = true;
+            } else if (this.vy < 0) {
+              this.y = p.y + p.h;
+              this.vy = 0;
+            }
+          }
+        }
+      }
+    }
   }
 
-  takeDamage(amt = 1) {
+  takeDamage(amount = 20, source = "Enemy") {
+    if (this.invulnerableTimer > 0) return;
+    this.health = Math.max(0, this.health - amount);
+    this.invulnerableTimer = 40;
+    sounds.playHurt();
+    particles.emitSparks(this.x + this.width / 2, this.y + this.height / 2, 8, '#ff5252');
+    game.triggerVibrate(60);
+
+    if (this.health <= 0) {
+      game.loseLife(source);
+    }
+  }
+
+  hitHazard() {
     if (this.invulnerableTimer > 0) return;
     this.health = Math.max(0, this.health - 25);
     this.invulnerableTimer = 45;
@@ -2067,13 +2221,18 @@ class Player {
     const screenX = this.x - cameraX;
     if (this.invulnerableTimer > 0 && Math.floor(Date.now() / 60) % 2 === 0) return;
 
+    // Active Skin Palette Configuration
+    const skinKey = (game && game.selectedSkin) || 'classic';
+    const skinCfg = (game && game.divineSkins && game.divineSkins[skinKey]) || DIVINE_SKINS.classic;
+    const pal = skinCfg.palette;
+
     ctx.save();
     ctx.translate(screenX + this.width / 2, this.y + this.height / 2);
     if (this.facing === -1) ctx.scale(-1, 1);
 
     const isRide = game && (game.currentLevelIndex === 10 || game.currentLevelIndex === 17 || game.currentLevelIndex === 22);
 
-    // Divine Golden Aura Ring
+    // Divine Golden / Cosmic / Warrior Aura Ring
     const auraPulse = Math.sin(Date.now() * 0.005) * 3;
     const isAwakened = this.divineAuraTimer > 0;
     const auraRadius = isAwakened ? 42 + Math.sin(Date.now() * 0.008) * 5 : 34 + auraPulse;
@@ -2084,10 +2243,12 @@ class Player {
       ctx.shadowColor = '#ffd700';
       ctx.shadowBlur = 20;
     } else {
-      ctx.fillStyle = this.boostTimer > 0 ? 'rgba(0, 229, 255, 0.35)' : 'rgba(255, 215, 0, 0.22)';
+      ctx.fillStyle = this.boostTimer > 0 ? 'rgba(0, 229, 255, 0.35)' : pal.aura;
+      ctx.shadowColor = pal.auraStroke;
+      ctx.shadowBlur = 8;
     }
     ctx.fill();
-    ctx.strokeStyle = isAwakened ? '#ffffff' : 'rgba(255, 215, 0, 0.45)';
+    ctx.strokeStyle = isAwakened ? '#ffffff' : pal.auraStroke;
     ctx.lineWidth = isAwakened ? 2.5 : 1.5;
     ctx.stroke();
     ctx.shadowBlur = 0;
@@ -2119,19 +2280,19 @@ class Player {
     }
 
     // =========================================================================
-    // CUTE, HEROIC & FRIENDLY LORD GANESHA SPRITE (CONSISTENT ALL 24 LEVELS)
+    // CUTE, HEROIC & FRIENDLY LORD GANESHA SPRITE (CUSTOM AVATAR & SKIN APPLIED)
     // =========================================================================
     const legOffset = this.isGrounded ? Math.sin(this.walkCycle) * 5 : 0;
     const idleBob = Math.sin(Date.now() * 0.004) * 1.5;
 
     // Plump Tummy (Lambodara)
-    ctx.fillStyle = '#ffd54f';
+    ctx.fillStyle = pal.skin;
     ctx.beginPath();
     ctx.arc(0, 10 + idleBob, 17, 0, Math.PI * 2);
     ctx.fill();
 
-    // Sacred Silk Pitambara Dhoti (Golden-Orange)
-    ctx.fillStyle = '#ff9800';
+    // Sacred Silk Pitambara Dhoti (Custom Skin)
+    ctx.fillStyle = pal.dhoti;
     ctx.beginPath();
     ctx.moveTo(-12, 12 + idleBob);
     ctx.lineTo(12, 12 + idleBob);
@@ -2141,25 +2302,26 @@ class Player {
     ctx.fill();
 
     // Golden Dhoti Hem & Sash
-    ctx.fillStyle = '#ffd700';
+    ctx.fillStyle = pal.dhotiHem;
     ctx.fillRect(-14, 23 + idleBob, 28, 3);
+    ctx.fillStyle = pal.dhotiSash;
     ctx.fillRect(-2, 12 + idleBob, 4, 14);
 
     // Feet / Lotus Steps
-    ctx.fillStyle = '#ffb300';
+    ctx.fillStyle = pal.feet;
     ctx.beginPath();
     ctx.ellipse(-8, 26 + (this.isGrounded ? legOffset : -3) + idleBob, 6, 4, 0, 0, Math.PI * 2);
     ctx.ellipse(8, 26 - (this.isGrounded ? legOffset : 3) + idleBob, 6, 4, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // Cute Round Head
-    ctx.fillStyle = '#ffe082';
+    ctx.fillStyle = pal.head;
     ctx.beginPath();
     ctx.arc(0, -9 + idleBob, 16, 0, Math.PI * 2);
     ctx.fill();
 
-    // Rosy Cute Cheeks
-    ctx.fillStyle = 'rgba(255, 128, 171, 0.45)';
+    // Rosy Cheeks
+    ctx.fillStyle = pal.cheeks;
     ctx.beginPath();
     ctx.arc(-9, -6 + idleBob, 4, 0, Math.PI * 2);
     ctx.arc(9, -6 + idleBob, 4, 0, Math.PI * 2);
@@ -2169,21 +2331,21 @@ class Player {
     const earFlap = Math.sin(this.walkCycle * 0.8) * 0.15;
     ctx.save();
     // Left Ear
-    ctx.fillStyle = '#ffe082';
+    ctx.fillStyle = pal.head;
     ctx.beginPath();
     ctx.ellipse(-17, -10 + idleBob, 9, 13, -0.25 + earFlap, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#f8bbd0';
+    ctx.fillStyle = pal.earInner;
     ctx.beginPath();
     ctx.ellipse(-17, -10 + idleBob, 6, 9, -0.25 + earFlap, 0, Math.PI * 2);
     ctx.fill();
 
     // Right Ear
-    ctx.fillStyle = '#ffe082';
+    ctx.fillStyle = pal.head;
     ctx.beginPath();
     ctx.ellipse(17, -10 + idleBob, 9, 13, 0.25 - earFlap, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#f8bbd0';
+    ctx.fillStyle = pal.earInner;
     ctx.beginPath();
     ctx.ellipse(17, -10 + idleBob, 6, 9, 0.25 - earFlap, 0, Math.PI * 2);
     ctx.fill();
@@ -2214,15 +2376,15 @@ class Player {
     }
 
     // Sacred Sandalwood Tilak & Trishul
-    ctx.fillStyle = '#d50000';
+    ctx.fillStyle = pal.gem || '#d50000';
     ctx.beginPath();
     ctx.arc(0, -17 + idleBob, 2, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#ffd700';
+    ctx.fillStyle = pal.crown;
     ctx.fillRect(-3, -15 + idleBob, 6, 1.5);
     ctx.fillRect(-1, -19 + idleBob, 2, 5);
 
-    // Tusks: Ekadanta (Broken right tusk with gold band) & Left complete tusk
+    // Tusks: Ekadanta & Left complete tusk
     ctx.fillStyle = '#ffffff';
     ctx.strokeStyle = '#ffb300';
     ctx.lineWidth = 0.8;
@@ -2241,13 +2403,13 @@ class Player {
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = '#ffd700';
+    ctx.fillStyle = pal.crown;
     ctx.fillRect(-8, -1 + idleBob, 3, 2);
 
     // Elephant Trunk & Golden Modak
     const trunkSway = Math.sin(this.walkCycle * 0.7) * 4;
     const trunkLift = this.isGrounded ? 0 : -6;
-    ctx.strokeStyle = '#ffe082';
+    ctx.strokeStyle = pal.head;
     ctx.lineWidth = 6.5;
     ctx.lineCap = 'round';
     ctx.beginPath();
@@ -2268,8 +2430,8 @@ class Player {
     ctx.fill();
     ctx.stroke();
 
-    // Royal Golden Mukut (Crown) with Ruby
-    ctx.fillStyle = '#ffd700';
+    // Royal Mukut (Crown) with Custom Gems & Gold
+    ctx.fillStyle = pal.crown;
     ctx.beginPath();
     ctx.moveTo(-13, -22 + idleBob);
     ctx.lineTo(-8, -34 + idleBob);
@@ -2278,11 +2440,11 @@ class Player {
     ctx.lineTo(13, -22 + idleBob);
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = '#ff8f00';
+    ctx.strokeStyle = pal.crownStroke;
     ctx.lineWidth = 1.2;
     ctx.stroke();
 
-    ctx.fillStyle = '#d50000';
+    ctx.fillStyle = pal.gem;
     ctx.beginPath();
     ctx.arc(0, -28 + idleBob, 3.5, 0, Math.PI * 2);
     ctx.fill();
@@ -2291,34 +2453,58 @@ class Player {
     ctx.arc(-1, -29 + idleBob, 1, 0, Math.PI * 2);
     ctx.fill();
 
-    // Golden Jewellery (Necklace & Armlets)
-    ctx.strokeStyle = '#ffd700';
+    // Golden / Jewel Necklace
+    ctx.strokeStyle = pal.necklace;
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(0, 5 + idleBob, 10, 0.2, Math.PI - 0.2);
     ctx.stroke();
 
-    // Sacred Weapon: Staff / Battle Axe
+    // Sacred Weapon: Staff / Battle Axe / Trishul
     ctx.save();
     const swing = this.isAttacking ? (this.attackTimer / this.attackDuration) * 1.6 - 0.8 : 0.25;
     ctx.rotate(swing);
-    ctx.strokeStyle = '#795548';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(10, 12 + idleBob);
-    ctx.lineTo(17, -26 + idleBob);
-    ctx.stroke();
-    ctx.fillStyle = '#ffd700';
-    ctx.beginPath();
-    ctx.arc(19, -22 + idleBob, 10, -Math.PI / 2, Math.PI / 2);
-    ctx.fill();
-    ctx.strokeStyle = '#ff6f00';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+
+    if (pal.weaponType === 'trishul') {
+      // Celestial Trishula
+      ctx.strokeStyle = pal.weaponStaff;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(10, 16 + idleBob);
+      ctx.lineTo(18, -32 + idleBob);
+      ctx.stroke();
+
+      // Trident Prongs
+      ctx.strokeStyle = pal.weaponHead;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(18, -32 + idleBob);
+      ctx.lineTo(18, -44 + idleBob); // Center Prong
+      ctx.moveTo(14, -32 + idleBob);
+      ctx.quadraticCurveTo(11, -38 + idleBob, 12, -42 + idleBob); // Left Prong
+      ctx.moveTo(22, -32 + idleBob);
+      ctx.quadraticCurveTo(25, -38 + idleBob, 24, -42 + idleBob); // Right Prong
+      ctx.stroke();
+    } else {
+      // Axe Weapon
+      ctx.strokeStyle = pal.weaponStaff;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(10, 12 + idleBob);
+      ctx.lineTo(17, -26 + idleBob);
+      ctx.stroke();
+      ctx.fillStyle = pal.weaponHead;
+      ctx.beginPath();
+      ctx.arc(19, -22 + idleBob, 10, -Math.PI / 2, Math.PI / 2);
+      ctx.fill();
+      ctx.strokeStyle = pal.weaponStroke;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
     ctx.restore();
 
     if (this.isAttacking) {
-      ctx.strokeStyle = 'rgba(255, 215, 0, 0.85)';
+      ctx.strokeStyle = pal.auraStroke || 'rgba(255, 215, 0, 0.85)';
       ctx.lineWidth = 5;
       ctx.beginPath();
       ctx.arc(16, 0 + idleBob, 38, -0.7, 0.9);
@@ -4487,7 +4673,7 @@ const LEVEL_CONFIGS = [
       { x: 870, y: 300, type: 'modak' }, { x: 1170, y: 240, type: 'modak' }
     ],
     altars: [{ x: 700, y: 406, isGoal: false }, { x: 1500, y: 406, isGoal: true }],
-    goalX: 1500, requiredKills: 2,
+    goalX: 1500,
     completionStory: "The Stone Golem bows in deep reverence before the divine wisdom and gentle courage of Lord Ganesha."
   },
   {
@@ -5177,12 +5363,21 @@ class GameEngine {
     this.claimedDays = [];
     this.rewardTimerInterval = null;
 
+    // Divine Avatars & Skin Customization System
+    this.divineSkins = DIVINE_SKINS;
+    this.selectedSkin = 'classic';
+    this.unlockedSkins = ['classic'];
+    this.wardrobePreviewSkin = 'classic';
+    this.wardrobePreviewAnimTimer = null;
+    this.wardrobeWalkCycle = 0;
+
     // Load persisted progress, profile, settings, leaderboard & daily rewards
     this.loadProgress();
     this.loadProfile();
     this.loadLeaderboard();
     this.loadSettings();
     this.loadDailyRewards();
+    this.loadSkins();
 
     this.bindUI();
     this.initLevelGrid();
@@ -5727,6 +5922,511 @@ class GameEngine {
       }
     };
     requestAnimationFrame(render);
+  }
+
+  // ==========================================================================
+  // 🎭 DIVINE AVATARS & WARDROBE SYSTEM METHODS
+  // ==========================================================================
+  loadSkins() {
+    try {
+      const savedSkin = localStorage.getItem('ganesha_selected_skin');
+      if (savedSkin && this.divineSkins[savedSkin]) {
+        this.selectedSkin = savedSkin;
+      }
+      const savedUnlocked = localStorage.getItem('ganesha_unlocked_skins');
+      if (savedUnlocked) {
+        this.unlockedSkins = JSON.parse(savedUnlocked) || ['classic'];
+      }
+      if (!this.unlockedSkins.includes('classic')) {
+        this.unlockedSkins.push('classic');
+      }
+      // Auto unlock check based on progression milestones
+      if (this.unlockedLevels >= 9 && !this.unlockedSkins.includes('vira')) {
+        this.unlockedSkins.push('vira');
+      }
+      if (this.claimedDays && this.claimedDays.includes(7) && !this.unlockedSkins.includes('suvarna')) {
+        this.unlockedSkins.push('suvarna');
+      }
+      const totalStars = Object.values(this.levelStars || {}).reduce((a, b) => a + b, 0);
+      if (totalStars >= 30 && !this.unlockedSkins.includes('panchamukha')) {
+        this.unlockedSkins.push('panchamukha');
+      }
+    } catch (e) {
+      console.warn("Could not load skins:", e);
+    }
+  }
+
+  saveSkins() {
+    try {
+      localStorage.setItem('ganesha_selected_skin', this.selectedSkin);
+      localStorage.setItem('ganesha_unlocked_skins', JSON.stringify(this.unlockedSkins));
+    } catch (e) {
+      console.warn("Could not save skins:", e);
+    }
+  }
+
+  openWardrobeModal() {
+    sounds.playClick();
+    this.loadSkins();
+    this.wardrobePreviewSkin = this.selectedSkin;
+    this.updateWardrobeUI();
+    document.getElementById('settings-modal').classList.add('hidden');
+    document.getElementById('player-profile-modal').classList.add('hidden');
+    document.getElementById('profile-dashboard-modal').classList.add('hidden');
+    document.getElementById('leaderboard-modal').classList.add('hidden');
+    document.getElementById('daily-reward-modal').classList.add('hidden');
+    const modal = document.getElementById('avatar-wardrobe-modal');
+    if (modal) modal.classList.remove('hidden');
+    this.inModal = true;
+    this.initWardrobeParticles();
+    this.startWardrobePreviewLoop();
+  }
+
+  updateWardrobeUI() {
+    const activeSkin = this.divineSkins[this.wardrobePreviewSkin] || this.divineSkins.classic;
+    const isUnlocked = this.unlockedSkins.includes(this.wardrobePreviewSkin);
+    const isEquipped = this.selectedSkin === this.wardrobePreviewSkin;
+
+    // 1. Update Treasury Bar
+    const coinsVal = document.getElementById('wardrobe-coins-val');
+    if (coinsVal) coinsVal.textContent = this.coins || 0;
+    const starsVal = document.getElementById('wardrobe-stars-val');
+    const totalStars = Object.values(this.levelStars || {}).reduce((a, b) => a + b, 0);
+    if (starsVal) starsVal.textContent = totalStars;
+    const gemsVal = document.getElementById('wardrobe-gems-val');
+    if (gemsVal) gemsVal.textContent = this.gems || (this.claimedDays ? this.claimedDays.filter(d => d === 5 || d === 7).length : 0);
+
+    // 2. Update Preview Badge, Desc, Perk
+    const nameEl = document.getElementById('wardrobe-active-skin-name');
+    if (nameEl) nameEl.textContent = activeSkin.name;
+    const tagEl = document.getElementById('wardrobe-active-skin-tag');
+    if (tagEl) {
+      tagEl.textContent = activeSkin.tag;
+      tagEl.className = `skin-tier-tag ${activeSkin.tierClass || 'tier-classic'}`;
+    }
+    const descEl = document.getElementById('wardrobe-active-skin-desc');
+    if (descEl) descEl.textContent = activeSkin.desc;
+    const perkEl = document.getElementById('wardrobe-active-skin-perk');
+    if (perkEl) perkEl.textContent = activeSkin.perk;
+
+    // 3. Update Action Button
+    const actionBtn = document.getElementById('btn-wardrobe-action');
+    const actionText = document.getElementById('wardrobe-action-text');
+    const actionIcon = document.getElementById('wardrobe-action-icon');
+
+    if (actionBtn && actionText) {
+      if (isEquipped) {
+        actionBtn.disabled = true;
+        actionBtn.classList.remove('pulse');
+        actionText.textContent = 'EQUIPPED ✓';
+        if (actionIcon) actionIcon.textContent = '✓';
+      } else if (isUnlocked) {
+        actionBtn.disabled = false;
+        actionBtn.classList.add('pulse');
+        actionText.textContent = 'EQUIP AVATAR';
+        if (actionIcon) actionIcon.textContent = '✨';
+      } else {
+        actionBtn.disabled = false;
+        actionBtn.classList.add('pulse');
+        if (actionIcon) actionIcon.textContent = '🔓';
+        if (activeSkin.costType === 'coins_or_ch1') {
+          actionText.textContent = `UNLOCK (500 🪙 or Ch 1)`;
+        } else if (activeSkin.costType === 'coins_or_day7') {
+          actionText.textContent = `UNLOCK (1000 🪙 or Day 7)`;
+        } else if (activeSkin.costType === 'coins_or_stars') {
+          actionText.textContent = `UNLOCK (2000 🪙 or 30 ⭐)`;
+        } else {
+          actionText.textContent = `UNLOCK (🪙 ${activeSkin.cost})`;
+        }
+      }
+    }
+
+    // 4. Update Grid Cards Status
+    Object.keys(this.divineSkins).forEach(skinId => {
+      const card = document.getElementById(`skin-card-${skinId}`);
+      const status = document.getElementById(`skin-status-${skinId}`);
+      if (!card || !status) return;
+
+      card.classList.remove('active', 'equipped');
+      if (skinId === this.wardrobePreviewSkin) {
+        card.classList.add('active');
+      }
+
+      if (this.selectedSkin === skinId) {
+        card.classList.add('equipped');
+        status.textContent = '✓ EQUIPPED';
+        status.className = 'skin-card-status equipped';
+      } else if (this.unlockedSkins.includes(skinId)) {
+        status.textContent = 'UNLOCKED';
+        status.className = 'skin-card-status unlocked';
+      } else {
+        const s = this.divineSkins[skinId];
+        status.className = 'skin-card-status';
+        if (s.costType === 'coins_or_ch1') status.textContent = '500 🪙 / Ch 1';
+        else if (s.costType === 'coins_or_day7') status.textContent = 'Day 7 / 1000 🪙';
+        else if (s.costType === 'coins_or_stars') status.textContent = '30 ⭐ / 2000 🪙';
+        else status.textContent = `${s.cost} 🪙`;
+      }
+    });
+  }
+
+  selectWardrobeSkin(skinId) {
+    if (!this.divineSkins[skinId]) return;
+    this.wardrobePreviewSkin = skinId;
+    sounds.playClick();
+    this.triggerVibrate(20);
+    this.updateWardrobeUI();
+  }
+
+  handleWardrobeAction() {
+    const skinId = this.wardrobePreviewSkin;
+    const skin = this.divineSkins[skinId];
+    if (!skin) return;
+
+    if (this.unlockedSkins.includes(skinId)) {
+      // Equip skin
+      this.selectedSkin = skinId;
+      this.saveSkins();
+      this.updateWardrobeUI();
+      sounds.playCollect();
+      sounds.playTempleBell(880);
+      this.triggerVibrate(40);
+    } else {
+      // Try to unlock
+      const totalStars = Object.values(this.levelStars || {}).reduce((a, b) => a + b, 0);
+      let canUnlock = false;
+      let costCoins = skin.cost || 0;
+
+      if (skin.costType === 'coins_or_ch1' && (this.unlockedLevels >= 9 || (this.coins && this.coins >= 500))) {
+        canUnlock = true;
+        if (this.coins >= 500 && this.unlockedLevels < 9) {
+          this.coins -= 500;
+        }
+      } else if (skin.costType === 'coins_or_day7' && ((this.claimedDays && this.claimedDays.includes(7)) || (this.coins && this.coins >= 1000))) {
+        canUnlock = true;
+        if (this.coins >= 1000 && (!this.claimedDays || !this.claimedDays.includes(7))) {
+          this.coins -= 1000;
+        }
+      } else if (skin.costType === 'coins_or_stars' && (totalStars >= 30 || (this.coins && this.coins >= 2000))) {
+        canUnlock = true;
+        if (this.coins >= 2000 && totalStars < 30) {
+          this.coins -= 2000;
+        }
+      } else if (this.coins && this.coins >= costCoins) {
+        canUnlock = true;
+        this.coins -= costCoins;
+      }
+
+      if (canUnlock) {
+        this.unlockedSkins.push(skinId);
+        this.selectedSkin = skinId;
+        this.saveSkins();
+        this.saveProgress();
+        this.updateHUD();
+        this.updateWardrobeUI();
+        sounds.playTitleChime();
+        sounds.playTempleBell(1046.50);
+        this.triggerVibrate([50, 70, 100]);
+        this.initWardrobeParticles();
+      } else {
+        sounds.playHurt();
+        this.triggerVibrate([20, 30]);
+        alert(`Divine Requirement Not Met!\nEarn more Sacred Coins, Stars, or complete Chapters to unlock ${skin.name}!`);
+      }
+    }
+  }
+
+  initWardrobeParticles() {
+    const canvas = document.getElementById('wardrobeParticlesCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = canvas.parentElement.offsetWidth || 700;
+    canvas.height = canvas.parentElement.offsetHeight || 500;
+
+    const particles = [];
+    const colors = ['#ffd700', '#ff9100', '#00e5ff', '#e040fb', '#ffffff'];
+    for (let i = 0; i < 40; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 1.5,
+        vy: -Math.random() * 1.5 - 0.5,
+        radius: Math.random() * 2.5 + 1,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        alpha: Math.random() * 0.7 + 0.3
+      });
+    }
+
+    const render = () => {
+      const modal = document.getElementById('avatar-wardrobe-modal');
+      if (!modal || modal.classList.contains('hidden')) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const p of particles) {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.y < 0) {
+          p.y = canvas.height;
+          p.x = Math.random() * canvas.width;
+        }
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      requestAnimationFrame(render);
+    };
+    render();
+  }
+
+  startWardrobePreviewLoop() {
+    const canvas = document.getElementById('wardrobePreviewCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    if (this.wardrobePreviewAnimTimer) cancelAnimationFrame(this.wardrobePreviewAnimTimer);
+
+    const renderLoop = () => {
+      const modal = document.getElementById('avatar-wardrobe-modal');
+      if (!modal || modal.classList.contains('hidden')) return;
+
+      this.wardrobeWalkCycle += 0.05;
+      this.drawWardrobePreviewAvatar(ctx, canvas.width, canvas.height);
+      this.wardrobePreviewAnimTimer = requestAnimationFrame(renderLoop);
+    };
+    this.wardrobePreviewAnimTimer = requestAnimationFrame(renderLoop);
+  }
+
+  drawWardrobePreviewAvatar(ctx, width, height) {
+    ctx.clearRect(0, 0, width, height);
+
+    const skinKey = this.wardrobePreviewSkin || 'classic';
+    const skinCfg = this.divineSkins[skinKey] || this.divineSkins.classic;
+    const pal = skinCfg.palette;
+
+    ctx.save();
+    ctx.translate(width / 2, height * 0.58);
+
+    const idleBob = Math.sin(Date.now() * 0.004) * 2;
+    const walkCycle = this.wardrobeWalkCycle;
+
+    // Glowing Aura Ring
+    const auraPulse = Math.sin(Date.now() * 0.006) * 4;
+    ctx.beginPath();
+    ctx.arc(0, -6, 42 + auraPulse, 0, Math.PI * 2);
+    ctx.fillStyle = pal.aura;
+    ctx.shadowColor = pal.auraStroke;
+    ctx.shadowBlur = 16;
+    ctx.fill();
+    ctx.strokeStyle = pal.auraStroke;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Plump Tummy
+    ctx.fillStyle = pal.skin;
+    ctx.beginPath();
+    ctx.arc(0, 10 + idleBob, 18, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Sacred Silk Dhoti
+    ctx.fillStyle = pal.dhoti;
+    ctx.beginPath();
+    ctx.moveTo(-13, 12 + idleBob);
+    ctx.lineTo(13, 12 + idleBob);
+    ctx.lineTo(15, 26 + idleBob);
+    ctx.lineTo(-15, 26 + idleBob);
+    ctx.closePath();
+    ctx.fill();
+
+    // Golden Dhoti Hem & Sash
+    ctx.fillStyle = pal.dhotiHem;
+    ctx.fillRect(-15, 24 + idleBob, 30, 3.5);
+    ctx.fillStyle = pal.dhotiSash;
+    ctx.fillRect(-2.5, 12 + idleBob, 5, 15);
+
+    // Lotus Feet
+    ctx.fillStyle = pal.feet;
+    ctx.beginPath();
+    ctx.ellipse(-9, 28 + idleBob, 6.5, 4.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(9, 28 + idleBob, 6.5, 4.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Cute Round Head
+    ctx.fillStyle = pal.head;
+    ctx.beginPath();
+    ctx.arc(0, -10 + idleBob, 17, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Rosy Cheeks
+    ctx.fillStyle = pal.cheeks;
+    ctx.beginPath();
+    ctx.arc(-10, -7 + idleBob, 4.5, 0, Math.PI * 2);
+    ctx.arc(10, -7 + idleBob, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Large Elephant Ears (Animated Flapping)
+    const earFlap = Math.sin(walkCycle * 0.8) * 0.15;
+    ctx.save();
+    // Left Ear
+    ctx.fillStyle = pal.head;
+    ctx.beginPath();
+    ctx.ellipse(-18, -11 + idleBob, 9.5, 14, -0.25 + earFlap, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = pal.earInner;
+    ctx.beginPath();
+    ctx.ellipse(-18, -11 + idleBob, 6.5, 10, -0.25 + earFlap, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Right Ear
+    ctx.fillStyle = pal.head;
+    ctx.beginPath();
+    ctx.ellipse(18, -11 + idleBob, 9.5, 14, 0.25 - earFlap, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = pal.earInner;
+    ctx.beginPath();
+    ctx.ellipse(18, -11 + idleBob, 6.5, 10, 0.25 - earFlap, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Eyes
+    ctx.fillStyle = '#3e2723';
+    ctx.beginPath();
+    ctx.arc(-5.5, -12 + idleBob, 2.5, 0, Math.PI * 2);
+    ctx.arc(5.5, -12 + idleBob, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(-6.5, -13 + idleBob, 1, 0, Math.PI * 2);
+    ctx.arc(4.5, -13 + idleBob, 1, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Tilak
+    ctx.fillStyle = pal.gem || '#d50000';
+    ctx.beginPath();
+    ctx.arc(0, -18 + idleBob, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = pal.crown;
+    ctx.fillRect(-3.5, -16 + idleBob, 7, 1.5);
+    ctx.fillRect(-1, -20 + idleBob, 2, 5);
+
+    // Tusks
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#ffb300';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(4, -4 + idleBob);
+    ctx.lineTo(9, 1 + idleBob);
+    ctx.lineTo(7, 2 + idleBob);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(-4, -4 + idleBob);
+    ctx.lineTo(-8, -1 + idleBob);
+    ctx.lineTo(-6, 0 + idleBob);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Elephant Trunk & Golden Modak
+    const trunkSway = Math.sin(walkCycle * 0.7) * 4;
+    ctx.strokeStyle = pal.head;
+    ctx.lineWidth = 7;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, -6 + idleBob);
+    ctx.quadraticCurveTo(6 + trunkSway, 6 + idleBob, 14 + trunkSway, 1 + idleBob);
+    ctx.stroke();
+
+    // Modak in Trunk
+    ctx.fillStyle = '#ffd54f';
+    ctx.strokeStyle = '#ff6f00';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    const mx = 14 + trunkSway;
+    const my = 1 + idleBob;
+    ctx.moveTo(mx, my - 6);
+    ctx.quadraticCurveTo(mx + 6, my + 4, mx, my + 6);
+    ctx.quadraticCurveTo(mx - 6, my + 4, mx, my - 6);
+    ctx.fill();
+    ctx.stroke();
+
+    // Royal Mukut
+    ctx.fillStyle = pal.crown;
+    ctx.beginPath();
+    ctx.moveTo(-14, -23 + idleBob);
+    ctx.lineTo(-8, -36 + idleBob);
+    ctx.lineTo(0, -44 + idleBob);
+    ctx.lineTo(8, -36 + idleBob);
+    ctx.lineTo(14, -23 + idleBob);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = pal.crownStroke;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    ctx.fillStyle = pal.gem;
+    ctx.beginPath();
+    ctx.arc(0, -30 + idleBob, 3.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(-1, -31 + idleBob, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Jewel Necklace
+    ctx.strokeStyle = pal.necklace;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(0, 5 + idleBob, 11, 0.2, Math.PI - 0.2);
+    ctx.stroke();
+
+    // Weapon
+    ctx.save();
+    if (pal.weaponType === 'trishul') {
+      ctx.strokeStyle = pal.weaponStaff;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(12, 16 + idleBob);
+      ctx.lineTo(20, -34 + idleBob);
+      ctx.stroke();
+
+      ctx.strokeStyle = pal.weaponHead;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(20, -34 + idleBob);
+      ctx.lineTo(20, -48 + idleBob);
+      ctx.moveTo(16, -34 + idleBob);
+      ctx.quadraticCurveTo(12, -40 + idleBob, 14, -45 + idleBob);
+      ctx.moveTo(24, -34 + idleBob);
+      ctx.quadraticCurveTo(28, -40 + idleBob, 26, -45 + idleBob);
+      ctx.stroke();
+    } else {
+      ctx.strokeStyle = pal.weaponStaff;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(12, 12 + idleBob);
+      ctx.lineTo(19, -28 + idleBob);
+      ctx.stroke();
+      ctx.fillStyle = pal.weaponHead;
+      ctx.beginPath();
+      ctx.arc(21, -24 + idleBob, 11, -Math.PI / 2, Math.PI / 2);
+      ctx.fill();
+      ctx.strokeStyle = pal.weaponStroke;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    ctx.restore();
   }
 
   loadLeaderboard() {
@@ -6779,6 +7479,41 @@ class GameEngine {
         document.getElementById('reward-celebration-modal').classList.add('hidden');
       });
     }
+
+    // Divine Avatars & Wardrobe Modal Bindings
+    const btnMenuWardrobe = document.getElementById('btn-menu-wardrobe');
+    if (btnMenuWardrobe) {
+      btnMenuWardrobe.addEventListener('click', () => this.openWardrobeModal());
+    }
+
+    const btnDashWardrobe = document.getElementById('btn-dash-wardrobe');
+    if (btnDashWardrobe) {
+      btnDashWardrobe.addEventListener('click', () => this.openWardrobeModal());
+    }
+
+    const btnCloseWardrobe = document.getElementById('btn-close-wardrobe');
+    if (btnCloseWardrobe) {
+      btnCloseWardrobe.addEventListener('click', () => {
+        sounds.playClick();
+        document.getElementById('avatar-wardrobe-modal').classList.add('hidden');
+        if (this.isInMainMenu) {
+          document.getElementById('main-menu-overlay').classList.remove('hidden');
+        }
+        this.inModal = false;
+      });
+    }
+
+    const btnWardrobeAction = document.getElementById('btn-wardrobe-action');
+    if (btnWardrobeAction) {
+      btnWardrobeAction.addEventListener('click', () => this.handleWardrobeAction());
+    }
+
+    document.querySelectorAll('.skin-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const skinId = card.getAttribute('data-skin');
+        if (skinId) this.selectWardrobeSkin(skinId);
+      });
+    });
 
     // Hero image & tap hint in main menu
     const tapHint = document.getElementById('menu-tap-hint');
@@ -8526,6 +9261,12 @@ class GameEngine {
 
     for (const altar of this.altars) {
       altar.update(this.player, this.particles);
+    }
+
+    // Auto goal completion when reaching end goal coordinate
+    const currentCfg = LEVEL_CONFIGS[this.currentLevelIndex];
+    if (currentCfg && currentCfg.goalX && this.player.x >= currentCfg.goalX && !this.inModal && !this.isCountingDown && !this.isInMainMenu) {
+      this.checkLevelGoalAchieved();
     }
 
     for (const sw of this.switches) {

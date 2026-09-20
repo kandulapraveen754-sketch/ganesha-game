@@ -210,6 +210,10 @@
             <span class="btn-icon">🎁</span>
             <span class="btn-text">DAILY DIVINE REWARD</span>
           </button>
+          <button id="btn-dash-wardrobe" class="divine-btn" type="button">
+            <span class="btn-icon">🎭</span>
+            <span class="btn-text">DIVINE AVATARS</span>
+          </button>
           <button id="btn-dash-edit-profile" class="secondary-btn" type="button">
             <span class="btn-icon">✏️</span>
             <span class="btn-text">EDIT SEAL</span>
@@ -266,6 +270,10 @@
             <span class="btn-icon">🎁</span>
             <span class="btn-text">DAILY DIVINE REWARD</span>
             <span class="reward-alert-dot hidden" id="menu-reward-badge">●</span>
+          </button>
+          <button id="btn-menu-wardrobe" class="menu-btn secondary-menu-btn wardrobe-menu-btn" type="button">
+            <span class="btn-icon">🎭</span>
+            <span class="btn-text">DIVINE AVATARS</span>
           </button>
           <button id="btn-menu-chapters" class="menu-btn secondary-menu-btn" type="button">
             <span class="btn-icon">🗺️</span>
@@ -1233,6 +1241,104 @@
           <span class="btn-icon">🙏</span>
           <span class="btn-text">ACCEPT BLESSING</span>
         </button>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         🎭 7. DIVINE AVATARS & SKIN CUSTOMIZATION WARDROBE MODAL
+         ==================================================================== -->
+    <div id="avatar-wardrobe-modal" class="modal-overlay hidden">
+      <div class="modal-card wardrobe-card">
+        <canvas id="wardrobeParticlesCanvas" class="wardrobe-particles-canvas"></canvas>
+        <div class="card-ornament">👑 ॐ श्री गणेशाय नमः 👑</div>
+        <h2 class="menu-modal-title">DIVINE AVATARS & WARDROBE</h2>
+        <p class="modal-subtitle-text">Equip sacred divine forms with radiant auras and special particle effects</p>
+
+        <!-- Treasury Stats in Wardrobe -->
+        <div class="wardrobe-treasury-bar">
+          <div class="wardrobe-currency"><span class="w-icon">🪙</span> <strong id="wardrobe-coins-val">0</strong> Coins</div>
+          <div class="wardrobe-currency"><span class="w-icon">⭐</span> <strong id="wardrobe-stars-val">0</strong> Stars</div>
+          <div class="wardrobe-currency"><span class="w-icon">💎</span> <strong id="wardrobe-gems-val">0</strong> Gems</div>
+        </div>
+
+        <div class="wardrobe-main-layout">
+          <!-- Left: Live Animated Avatar Stage -->
+          <div class="wardrobe-preview-stage">
+            <div class="wardrobe-pedestal-glow"></div>
+            <canvas id="wardrobePreviewCanvas" width="220" height="240" class="wardrobe-preview-canvas"></canvas>
+            <div class="wardrobe-skin-title-badge">
+              <h3 id="wardrobe-active-skin-name">Bal Ganesha</h3>
+              <span id="wardrobe-active-skin-tag" class="skin-tier-tag tier-classic">🌟 Sacred Form</span>
+            </div>
+            <p id="wardrobe-active-skin-desc" class="wardrobe-skin-desc">
+              The beloved auspicious form of Lord Ganesha adorned with fragrant flowers, golden pitambara silk, and a celestial modak.
+            </p>
+            <div class="wardrobe-skin-perk">
+              <span class="perk-icon">✨</span>
+              <span id="wardrobe-active-skin-perk">Aura: Sacred Golden Light & Spark Trail</span>
+            </div>
+            
+            <div class="wardrobe-action-wrap">
+              <button id="btn-wardrobe-action" class="divine-btn pulse wardrobe-equip-btn" type="button">
+                <span class="btn-icon" id="wardrobe-action-icon">✓</span>
+                <span class="btn-text" id="wardrobe-action-text">EQUIPPED</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Right: Avatar Selection Grid -->
+          <div class="wardrobe-grid-wrap">
+            <div class="wardrobe-skins-grid" id="wardrobe-skins-grid">
+              <!-- Skin 1: Classic Bal Ganesha -->
+              <div class="skin-card active equipped" data-skin="classic" id="skin-card-classic">
+                <div class="skin-card-header">
+                  <span class="skin-card-icon">🪔</span>
+                  <span class="skin-card-tag">DEFAULT</span>
+                </div>
+                <h4 class="skin-card-name">Bal Ganesha</h4>
+                <p class="skin-card-sub">Golden Pitambara Silk</p>
+                <div class="skin-card-status equipped" id="skin-status-classic">✓ EQUIPPED</div>
+              </div>
+
+              <!-- Skin 2: Vira Ganesha (Warrior) -->
+              <div class="skin-card" data-skin="vira" id="skin-card-vira">
+                <div class="skin-card-header">
+                  <span class="skin-card-icon">⚔️</span>
+                  <span class="skin-card-tag">WARRIOR</span>
+                </div>
+                <h4 class="skin-card-name">Vira Ganesha</h4>
+                <p class="skin-card-sub">Armor & Battle Axe</p>
+                <div class="skin-card-status" id="skin-status-vira">500 🪙 / Ch 1</div>
+              </div>
+
+              <!-- Skin 3: Suvarna Ganesha (Pure Gold) -->
+              <div class="skin-card" data-skin="suvarna" id="skin-card-suvarna">
+                <div class="skin-card-header">
+                  <span class="skin-card-icon">👑</span>
+                  <span class="skin-card-tag">RADIANT</span>
+                </div>
+                <h4 class="skin-card-name">Suvarna Ganesha</h4>
+                <p class="skin-card-sub">Pure Gold Aura & Lotus</p>
+                <div class="skin-card-status" id="skin-status-suvarna">Day 7 / 1000 🪙</div>
+              </div>
+
+              <!-- Skin 4: Panchamukha Ganesha (Cosmic) -->
+              <div class="skin-card" data-skin="panchamukha" id="skin-card-panchamukha">
+                <div class="skin-card-header">
+                  <span class="skin-card-icon">🌌</span>
+                  <span class="skin-card-tag">COSMIC</span>
+                </div>
+                <h4 class="skin-card-name">Panchamukha</h4>
+                <p class="skin-card-sub">Cosmic Trishul & Stars</p>
+                <div class="skin-card-status" id="skin-status-panchamukha">30 ⭐ / 2000 🪙</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="menu-actions">
+          <button id="btn-close-wardrobe" class="secondary-btn" type="button">◀ BACK TO MENU</button>
+        </div>
       </div>
     </div>
 
