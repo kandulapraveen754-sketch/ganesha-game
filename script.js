@@ -6599,6 +6599,19 @@ class GameEngine {
       btnClaimDailyReward.addEventListener('click', () => this.claimDailyReward());
     }
 
+    // Direct card tap to claim active reward
+    document.querySelectorAll('.daily-reward-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const day = parseInt(item.getAttribute('data-day'), 10);
+        if (day === this.getCurrentRewardDay() && this.isDailyRewardAvailable()) {
+          this.claimDailyReward();
+        } else {
+          sounds.playClick();
+          this.triggerVibrate(15);
+        }
+      });
+    });
+
     const btnCollectRewardAck = document.getElementById('btn-collect-reward-ack');
     if (btnCollectRewardAck) {
       btnCollectRewardAck.addEventListener('click', () => {

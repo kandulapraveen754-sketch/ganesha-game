@@ -391,7 +391,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 20000 !important;
   transition: opacity 0.3s ease;
   padding: 12px;
   box-sizing: border-box;
@@ -3865,6 +3865,10 @@ body {
 }
 
 /* Celebration Popup Modal */
+#reward-celebration-modal {
+  z-index: 25000 !important;
+}
+
 .celebration-card {
   width: min(90vw, 440px) !important;
   background: radial-gradient(circle, #380d47 0%, #150222 70%, #05000a 100%) !important;
